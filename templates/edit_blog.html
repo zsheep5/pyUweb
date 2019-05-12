@@ -2,13 +2,39 @@
 
 <!-- Header
    ================================================== -->
+   <body class="single"> 
    <TEMPLATE name="top_nav_bar.html"/>
 
+
    <!-- Content
+
    ================================================== -->
-   <script src="<TMPL_VAR name="STATIC.furlpath"/js/ckeditor5/ckeditor.js"></script>
+  
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5/ckeditor.js"> </script>
+   <form action="TMPL_VAR name=" method="post">   
+      <textarea name="content" id="editor"></textarea>
+   </form>
+   <script>
+         ClassicEditor
+             .create( document.querySelector( '#editor' ),
+               {
+                  toolbar: [ 'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 
+                           'numberedList', 'blockQuote' ],
+                  heading: {
+                     options: [
+                        { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+                        { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+                        { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' }
+                     ]
+                  }
+               }
+              )
+             .catch( error => {
+                 console.error( error );
+             } );
+     </script>
 
     <!-- Footer
    ================================================== -->
-
-<TEMPLATE name="js.html"
+   </body>
+<TEMPLATE name="js.html"/>

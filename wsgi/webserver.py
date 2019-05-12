@@ -2,7 +2,13 @@ import wsgiserver, importlib
 from optparse import OptionParser as op
 from sys import argv
 
+##befor calling import module must add the path
+## where pyUweb.py file is located and the
+## path(s) to website applications 
+from sys import path
+path.append('/home/justin/git_hub/pyUweb')
 
+from globals import APPSTACK as _as
 
 def parse_args(p_argv):
 
@@ -29,10 +35,14 @@ if __name__ == "__main__":
     (options, args)= parse_args(argv[1:])
 
     ar = importlib.import_module(options.module)
-
+    
+    _dis = {}
+    
     if hasattr(ar, options.func) : 
         ap = getattr(ar, options.func)
-        _d = wsgiserver.WSGIPathInfoDispatcher({'/'+ options.script: ap})
+        for key, value in sorted(_as.items()):  ##need to convert the app stack in dispatch for wsgiserver
+            _dis.update( { '/' + key: ap})
+        _d = wsgiserver.WSGIPathInfoDispatcher(_dis)
         server = wsgiserver.WSGIServer(_d, host=options.ip, port=options.port)
         server.start()
     else:

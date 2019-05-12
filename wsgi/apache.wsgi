@@ -1,4 +1,6 @@
 
+## sample code how to create a apache wsgi file.
+## tipically found in the apache webserver path
 import posixpath
 import sys
 sys.path.append('/var/www/blog/wsgi') 

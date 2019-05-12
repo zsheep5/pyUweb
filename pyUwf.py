@@ -8,12 +8,18 @@ from datetime import datetime as dt
 from datetime import timedelta as td
 from http.cookies import SimpleCookie as sc
 from http.cookies import Morsel as mc
+import uuid
 
 ##this is the main driving function it runs the below start up functions
 # if all are true it then searches for the app to be called then processes it
 #      
 def kick_start(enviro, start_response):
-
+    if not check_paths():
+        return server_respond(pstatus='500 ', 
+            poutput='Can not connect to the Database', pre=None,
+            sr=start_response)
+    else:
+        append_to_sys_path()
     if not connect_to_db(pwd='123456'):
         return server_respond(pstatus='500 ', 
             poutput='Can not connect to the Database', pre=None,
@@ -63,15 +69,16 @@ def server_respond(pstatus=g.STATUS,
         poutput='',
         sr = None): 
     
-    if g.ERRORSSHOW:
-        poutput += "\r\n" + dump_globals() 
 
-    """run_app also calls render  engine hence why it does a check on None
-    default is set to None so it does not typically get call here
-    primarly here to render the Error Responds or other defaults  Defaults"""
-
-    if pre is not None and g.TEMPLATE_TO_RENDER != '':
-        pre(g.TEMPLATE_TO_RENDER, g.CONTEXT, 'string')
+    if g.ERRORSSHOW or (pstatus != '200' and g.ERRORSSHOW):
+        build_template('error', g.TEMPLATE_STACK.get('error'), False)
+        error_context = {'Dump':dump_globals()}
+        _ef = g.ENVIRO['TEMPLATE_CACHE_PATH'] + 'error' + g.TEMPALATE_EXTENSION
+        poutput += g.TEMPLATE_ENGINE(_ef,
+                error_context,
+                g.TEMPLATE_TYPE, 
+                g.TEMPLATE_TMP_PATH
+            )
 
     _head = list(pheaders.items()) # wsgi wants this as list 
     _head.extend( [('Set-Cookie', str(v).strip() +";" ) for k, v in pcookies.items()]) #put in the cookies 
@@ -83,7 +90,7 @@ def server_respond(pstatus=g.STATUS,
     return [_outputB]
 
 def dump_globals():
-    output = 'APACHE_ENVIRO \r\n'
+    output = 'WebServer_ENVIRO \r\n'
     for key, value in sorted(g.APACHE_ENVIRO.items()):
         if value is not None:
             output += "%s %s \r\n " %(key,value)
@@ -145,7 +152,8 @@ def dump_globals():
     output += "Security Context is not dumped \r\n"
 
     return output
-    
+
+
 ## papp_filename is the python module being dynamically imported 
 ## papp_path is the path to the module it should follow python . notation
 ## papp_command the function in the module that will be executed. 
@@ -165,14 +173,14 @@ def run_pyapp(papp_filename='',
     error( 'var pass = %s'% (ptemplate_stack), 'what value is passed into ptemplate_stacks')
     if ptemplate_stack in g.TEMPLATE_STACK:
         to_render = build_template( papp_command, 
-                    g.TEMPLATE_STACK[papp_command])
+                    g.TEMPLATE_STACK[ptemplate_stack])
         if not to_render:
             error("failed to render a template for %s" % (ptemplate_stack), 'use template stack')
     ## try to use the app name to find the template 
     elif papp_command in g.TEMPLATE_STACK:
         error('entered template via app_command', 'run_pyapp')
         to_render = build_template( papp_filename, 
-                    g.TEMPLATE_STACK[papp_filename])
+                    g.TEMPLATE_STACK[papp_command])
         if not to_render: 
             error("failed to render a template for %s" % (papp_filename) , 'use app name')
     ## try to find the template based on the python file itself 
@@ -228,6 +236,7 @@ def add_globals_to_Context():
     g.CONTEXT.update({'URLS':'https://'+g.ENVIRO['URL']})
     g.CONTEXT.update({'APPURL':g.ENVIRO['PROTOCOL'] + g.ENVIRO['URL'] + g.ENVIRO['SCRIPT_NAME']} )
     g.CONTEXT.update({'sec':g.SEC})
+    g.CONTEXT.update({'CSB':g.CSB})
     return True
         
 def match_uri_to_app():
@@ -269,10 +278,11 @@ def check_app_in_appstack():
         return True
     return False
 
-def build_template(papp_name='', ptstack=[]):
+def build_template(papp_name='', ptstack=[], pupdate_global=True ):
     error('enter_build_template' )
     _error_mess = ''
-    g.TEMPLATE_TO_RENDER = g.ENVIRO['TEMPLATE_CACHE_PATH'] + papp_name + g.TEMPALATE_EXTENSION
+    if pupdate_global:
+        g.TEMPLATE_TO_RENDER = g.ENVIRO['TEMPLATE_CACHE_PATH'] + papp_name + g.TEMPALATE_EXTENSION
     if template_cache_is_in(papp_name + g.TEMPALATE_EXTENSION):
         return True
     ## YES NOT pythonic but need to know if on first item in the list
@@ -387,9 +397,10 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
                 g.POST['POST_COUNT']+= 1
 
         g.POST.update({'CONTENT_TYPE': cgi.parse_header(e.get['CONTENT_TYPE'])})
-        return True
-
-    if e.get('REQUEST_METHOD').upper() == 'GET':
+        if check_CSB(g.POST.get('CSB')):
+            return True
+        return False
+    elif e.get('REQUEST_METHOD').upper() == 'GET':
         _url = bytes_to_text(e.get('REQUEST_URI'))
         g.GET.update({"PATH_TO_APP":bytes_to_text(e.get('mod_wsgi.path_info')) })
         g.GET.update({'SCRIPT_ROOT':bytes_to_text( e.get('mod_wsgi.script_name'))})
@@ -418,8 +429,36 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
                     bytes_to_text(value)
                 })
                 g.GET['QUERY_STRING_COUNT']+=1
-        return True
+        if check_CSB(g.GET.get('CSB')):
+            return True
+        return False
     return False
+
+def check_CSB(pcsb):
+    q_str =""" select true from csb
+	            where csb_id = %(pcsb)s 
+                and csb_expires > now()""";
+    _cur = CONN.get('PG1').cursor()
+    _cur.execute(q_str,{'pcsb':pcsb})
+    _r = _cur.fetchall()
+    if len(_r) > 0:
+        _return = True
+    else:
+        _return = False
+    q_str = """ delete from csb where csb_id = %(pcsb)s """
+    _cur.execute(q_str,{'pcsb':pcsb})
+    _cur.commit()
+    return _return 
+
+
+def save_CSB(pcsb):
+    q_str =""" insert into csb values ( %(session_id)s 
+                now() + interval '30 minutes' )""";
+    _cur = g.CONN.get('PG1').cursor()
+    g.CSB = uuid.uuid1().hex
+    _cur.execute(q_str,{'session_id': g.SEC['USER_ID']+ g.CSB})
+    _cur.commit()
+    return True
 
 def bytes_to_text(_p, encode=g.ENVIRO['ENCODING']):
     if isinstance(_p, bytes):
@@ -834,5 +873,42 @@ def create_default_users_grp(p_con):
     cur = p_con.cursor()
     cur.execute(q_str)
     p_con.commit()
+
+def check_paths():
+    """goes over the file paths defined in the globals file 
+    making sure they exists
+    """
+    try :
+        if not os.path.exists(g.TEMPLATE_TMP_PATH):
+            os.makedirs(g.TEMPLATE_TMP_PATH, 0o755)
+
+        if not os.path.exists(g.ENVIRO.get('TEMPLATE_PATH')):
+            os.makedirs(g.ENVIRO.get('TEMPLATE_PATH'), 0o755)
+            
+        if not os.path.exists(g.ENVIRO.get('TEMPLATE_CACHE_PATH')):
+            os.makedirs(g.ENVIRO.get('TEMPLATE_CACHE_PATH'), 0o755)
+
+        if not os.path.exists(g.ENVIRO.get('MEDIA').get('filepath')):
+            os.makedirs(g.ENVIRO.get('MEDIA').get('filepath'), 0o755)
+        
+        if not os.path.exists(g.ENVIRO.get('STATIC').get('filepath')):
+            os.makedirs(g.ENVIRO.get('STATIC').get('filepath'), 0o755)
+        
+        if not os.path.exists(g.ENVIRO.get('IMAGES').get('filepath')):
+            os.makedirs(g.ENVIRO.get('IMAGES').get('filepath'), 0o755)
+        
+        for _p in g.APPS_PATH:
+            if not os.path.exists(_p):
+                os.makedirs(_p, 0o755)
+    except OSError as e:
+        error(str(e), 'check_paths_function')
+        return False
+
+    return True
+
+def append_to_sys_path():
+    from sys import path
+    for _p in g.APPS_PATH:
+        path.append(_p)
 
 #print(break_apart_dic(g.APPSTACK, '' ))

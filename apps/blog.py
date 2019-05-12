@@ -143,7 +143,7 @@ def edit_blog():
            _key = int(g.Post['blogkey'])
     
     if _key == -1:
-        _key = get_db_next_id('blog_blog_id_seq')
+        _key = m.get_db_next_id('blog_blog_id_seq')
         if _key == -1:
             return False
         g.CONTEXT.update({'mode':'new',
@@ -168,7 +168,15 @@ def edit_blog():
         
     return False
 
-def add_blog(p_user =-1 , p_htmltext='', p_tags='', p_title='' ):
+def new_blog():
+    g.CONTEXT.update({'blog_id' : m.get_db_next_id("blog_blog_id_seq"),
+                    'save_blog': 'save_blog'})
+    return True
+
+def save_blog():
+
+
+def commit_blog(p_user =-1 , pblog_id =-1, p_htmltext='', p_tags='', p_title='',  ):
     q_str =  """ insert into values
             (
                 default, %(blog_user_id)s, now() ,

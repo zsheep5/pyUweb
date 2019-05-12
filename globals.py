@@ -37,14 +37,18 @@ global ERRORSSHOW
 global CLIENT_STATE
 global COOKIES
 global COOKIES_EXPIRES ##number in the future until a cookie expires  
+global APPS_PATH  ## list of directories to append to the python sys path to find source files
+
+APPS_PATH = ['/home/justin/git_hub/pyUweb/apps']
+
 APACHE_ENVIRO= None
 ENVIRO={
-    'DOCS':{'urlpath':'/documents', 'filepath':'/var/www/blog/static/documents', 'furlpath':''},
+    'DOCS':{'urlpath':'/documents', 'filepath':'/home/justin/git_hub/pyUweb/static/documents', 'furlpath':''},
     'LOG_LEVEL': 'DEBUG',
     'ENCODING':'utf-8',
     'ERROR_RETURN_CLIENT':True,
     'ERROR_LOG':'system',
-    'MEDIA':{'urlpath':'/media', 'filepath':'/var/www/blog/static/media', 'furlpath':''},
+    'MEDIA':{'urlpath':'/media', 'filepath':'/home/justin/git_hub/pyUweb/static/media', 'furlpath':''},
     'MEMCACHE_USE':False, 
     'PYAPP_TO_RUN':'',
     'PROTOCOL':'http',
@@ -54,10 +58,10 @@ ENVIRO={
     'URI_PATH_NOT_MATCHED':'',
     'SERVER_NAME':'',
     'SERVER_PORT':'',
-    'STATIC':{'urlpath':'/static', 'filepath':'var/www/blog/static/', 'furlpath':''},
-    'IMAGES':{'urlpath':'/static/images', 'filepath':'var/www/blog/static/', 'furlpath':''},
-    'TEMPLATE_PATH':'/var/www/blog/templates/',
-    'TEMPLATE_CACHE_PATH':'/var/www/blog/cache/templates/',
+    'STATIC':{'urlpath':'/static', 'filepath':'/home/justin/git_hub/pyUweb/static/', 'furlpath':''},
+    'IMAGES':{'urlpath':'/static/images', 'filepath':'/home/justin/git_hub/pyUweb/static/', 'furlpath':''},
+    'TEMPLATE_PATH':'/home/justin/git_hub/pyUweb/templates/',
+    'TEMPLATE_CACHE_PATH':'/home/justin/git_hub/pyUweb/cache/pre_render/',
     'TEMPLATE_CACHE_AGING_SECONDS':30,
     'URL_CURRENT_PATH':'',
     'URL':'192.168.1.72',
@@ -65,9 +69,7 @@ ENVIRO={
 ERRORSTACK =[]
 ERRORSSHOW = True
 
-import sys
-sys.path.append('/var/www/blog/wsgi')
-sys.path.append('/var/www/python_scripts')
+
 
 if ENVIRO['MEMCACHE_USE']:
     from pymemcache.client import mem
@@ -78,7 +80,7 @@ from pyctemplate import compile_template  #default template engine
 
 TEMPLATE_ENGINE = compile_template  #map the function to this global 
 TEMPLATE_TO_RENDER = '' ##
-TEMPLATE_TMP_PATH = '/var/www/blog/templates/tmp' # staging folder for templates to be written to 
+TEMPLATE_TMP_PATH = '/home/justin/git_hub/pyUweb/cache/post_render/' # staging folder for templates to be written to 
 TEMPLATE_TYPE = 'file'  #ctemplate works off a string containing the html sent to it or path/filename to the html template 
 
 HEADERS={
@@ -153,10 +155,24 @@ APPSTACK = {
             'security':False,
             'content_type': 'text/html',
             },
-    'edit':{'filename':'blog', 
+    'edit_blog':{'filename':'blog', 
               'template_stack':'blog_editor',
               'path':'.',
               'command':'edit_blog', 
+              'security':False,
+              'content_type': 'text/html',
+              },
+    'new_blog':{'filename':'blog', 
+              'template_stack':'blog_editor',
+              'path':'.',
+              'command':'new_blog', 
+              'security':False,
+              'content_type': 'text/html',
+              },
+    'save_blog':{'filename':'blog', 
+              'template_stack':'view',
+              'path':'.',
+              'command':'save_blog', 
               'security':False,
               'content_type': 'text/html',
               },
@@ -212,6 +228,7 @@ TEMPLATE_STACK={
             'blog.html', 
             'blog_comments.html', 
             'search.html'],
+
     'view':['view_page.html',
             'base.html',
             'top_nav_bar.html',
@@ -222,7 +239,7 @@ TEMPLATE_STACK={
             'base.html',
             'top_nav_bar.html',
         ],
-    'blog_editor':['editor_blog.html',
+    'blog_editor':['edit_blog.html',
             'base.html',
             'top_nav_bar.html',
             'js.html',
@@ -231,8 +248,8 @@ TEMPLATE_STACK={
             'base.html',
             'top_nav_bar.html',
             'js.html'
-    ]
-    
+        ],
+    'error':['error.html'],
 }
 ## the template extension is 
 TEMPALATE_EXTENSION = '.html'
