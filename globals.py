@@ -157,7 +157,7 @@ APPSTACK = {
               'template_stack':'blog_editor',
               'path':'.',
               'command':'edit_blog', 
-              'security':True,
+              'security':false,
               'content_type': 'text/html',
               },
     'blog_comment':{'template_stack':'view',
@@ -174,8 +174,8 @@ APPSTACK = {
                       'security':False,
                       'content_type': 'text/html',
                     },
-    'login':{'template_stack':'view',
-            'filename':'login', 
+    'log_in':{'template_stack':'log_in',
+             'filename':'', 
              'path':'.', 
              'command':'init', 
              'security':False,
@@ -222,8 +222,13 @@ TEMPLATE_STACK={
     'blog_editor':['editor_blog.html',
             'base.html',
             'top_nav_bar.html',
-
+            'js.html',
         ],
+    'log_in':['login_html',
+            'base.html',
+            'top_nav_bar.html',
+            'js.html'
+    ]
     
 }
 ## the template extension is 

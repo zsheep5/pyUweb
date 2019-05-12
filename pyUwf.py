@@ -16,20 +16,18 @@ def kick_start(enviro, start_response):
 
     if not connect_to_db(pwd='123456'):
         return server_respond(pstatus='500 ', 
-            poutput='Can not connect to the Database', pre=None)
+            poutput='Can not connect to the Database', pre=None,
+            sr=start_response)
     elif not load_enviro(enviro):
         return server_respond(pstatus='500 ', 
-            poutput='load enviro', pre=None)
+            poutput='load enviro', pre=None, sr=start_response)
     elif not check_SSL(enviro):
         return server_respond(pstatus='500 ', 
-            poutput='SSL Check failure', pre=None)
+            poutput='SSL Check failure', pre=None, sr=start_response)
     elif not match_uri_to_app():
         return server_respond(pstatus='500 ', 
-            poutput='URI did not match to anything on this server', pre=None)
-    elif  not load_session(p_session_id=g.COOKIES.get('session_id'),
-                            p_con= get_db_connection()):
-        return server_respond(pstatus='500 ', 
-            poutput='load session failed', pre=None)
+            poutput='URI did not match to anything on this server', pre=None,
+            sr=start_response)
     else:
         _ap =  g.ENVIRO['PYAPP_TO_RUN']
         _test = run_pyapp ( 
@@ -40,16 +38,21 @@ def kick_start(enviro, start_response):
                 pcontent_type=  _ap['content_type']
             )
         if _test:
-            return server_respond( poutput=g.OUTPUT, pre=None, )
+            return server_respond( poutput=g.OUTPUT, pre=None, 
+            sr=start_response)
+    save_client_state()
+    
     return server_respond(pstatus='500 ', 
         pcontext=[], 
         pheaders={'Content-type': 'text/plain'}, 
         pre=None, 
-        poutput='Internal Server Error No Command Sent'
+        poutput='Internal Server Error No Command Sent',
+        sr=start_response
         )
 
 #converts the headers, enviroment, to bytes 
 # runs the template engine and converts the result to bytes
+#calls the start_reponse function passing the status and headers out
 # and returns output reponse to be passed back to mod_wsgi
 def server_respond(pstatus=g.STATUS, 
         pcontext=g.CONTEXT, 
@@ -57,7 +60,8 @@ def server_respond(pstatus=g.STATUS,
         penviro=g.ENVIRO,
         pcookies=g.COOKIES,
         pre=None,
-        poutput=''): 
+        poutput='',
+        sr = None): 
     
     if g.ERRORSSHOW:
         poutput += "\r\n" + dump_globals() 
@@ -75,7 +79,8 @@ def server_respond(pstatus=g.STATUS,
 
     ##add the content length just before returning wsgi module
     _head.append( ('Content-Length', str(len(_outputB))))
-    return [_outputB, pstatus, _head]
+    sr(pstatus, _head)
+    return [_outputB]
 
 def dump_globals():
     output = 'APACHE_ENVIRO \r\n'
@@ -91,7 +96,7 @@ def dump_globals():
     output += "\r\nCookies  \r\n "
     if len(g.COOKIES):
         for k, v in sorted(g.COOKIES.items()):
-            output += 'Cookie Key = %s value= %s' %(k, v)
+            output += 'Cookie Key = %s  value= %s' %(k, v)
 
     output += "\r\n \r\n APPLICATION ENVIROMENT \r\n"
     for key, value in  sorted(g.ENVIRO.items()):
@@ -332,8 +337,17 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
     g.ENVIRO['REQUEST_SCHEME'] = bytes_to_text(e.get('REQUEST_SCHEME'))
     g.ENVIRO['HTTP_USER_AGENT'] = bytes_to_text(e.get('HTTP_USER_AGENT'))
     g.ENVIRO['REMOTE_ADDR'] = bytes_to_text(e.get('REMOTE_ADDR'))
-    g.ENVIRO['SCRIPT_NAME'] =bytes_to_text(e.get('mod_wsgi.script_name'))
-    g.ENVIRO['URI_PATH'] = bytes_to_text(e.get('mod_wsgi.path_info'))
+    if 'mod_wsgi.script_name' in e:
+        g.ENVIRO['SCRIPT_NAME'] =bytes_to_text(e.get('mod_wsgi.script_name'))
+    else:
+        g.ENVIRO['SCRIPT_NAME'] =bytes_to_text(e.get('SCRIPT_NAME'))
+    if 'mod_wsgi.path_info' in e:
+        g.ENVIRO['URI_PATH'] = bytes_to_text(e.get('mod_wsgi.path_info'))
+    elif 'PATH_INFO' in e:
+        g.ENVIRO['URI_PATH'] = bytes_to_text(e.get('PATH_INFO'))
+    if len(g.ENVIRO['URI_PATH'])<1:
+        g.ENVIRO['URI_PATH'] = bytes_to_text(e.get('REQUEST_URI'))
+
     g.ENVIRO['PROTOCOL']= 'http://'
     g.ENVIRO['STATIC']['furlpath']=g.ENVIRO['PROTOCOL']+g.ENVIRO['URL']+g.ENVIRO['STATIC']['urlpath']
     g.ENVIRO['IMAGES']['furlpath']=g.ENVIRO['PROTOCOL']+g.ENVIRO['URL']+g.ENVIRO['IMAGES']['urlpath']
@@ -345,11 +359,13 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
         _co = sc()
         _co.load(e.get('HTTP_COOKIE'))
         if _co.get('session_id'): ##see if the session id is set and if we have previous 
-            ## function events that need to be retried.  
+            
+            for k, v in _co.items():
+                g.COOKIES.update({k:v})
+            ## load the session from the database if successful skip over te load enviro.  
             if load_session(_co.get('session_id')):  ## this always set session id
                 return True
-        for k, v in _co.items():
-            g.COOKIES.update({k:v}) 
+         
 
     script = ''
     command = ''
@@ -449,7 +465,7 @@ def set_cookie(pname='', pvalue='', pexpires=None, pdomain=None,
     morsel = mc()
     name, value = str(pname), str(pvalue)
     morsel.set(name, value, value)
-    morsel['expires'] = pexpires or  (dt.utcnow() + td(days=g.COOKIES_EXPIRES)).strftime('%a, %d %b %Y %H:%M:%S %Z') 
+    morsel['expires'] = pexpires or  (dt.utcnow() + td(seconds=g.COOKIES_EXPIRES)).strftime('%a, %d %b %Y %H:%M:%S %Z') 
     morsel['path'] = ppath or g.ENVIRO.get('URI_PATH')
     if pdomain:
         morsel['domain'] = pdomain
@@ -467,6 +483,19 @@ def check_credentials(papp_to_run = '', user_id= -1):
                 return client_redirect(g.APPSTACK['login'], 307, 
                     'Application requires Security log in please')
     return True
+    
+def log_in_page():
+    save_client_state()
+    ##clear the context and outputs
+    g.CONTEXT={}
+    g.CONTEXT.update({"user_name":g.COOKIES.get('user_name')})
+    g.OUTPUT = ''
+    build_template('log_in', g.TEMPLATE_STACK.get('log_in'))
+
+    return True
+
+def log_user_in():
+
 
 def load_session(p_session_id = None, p_con=None):
     """ Returns true of stored session loads and retry command is set
@@ -474,28 +503,32 @@ def load_session(p_session_id = None, p_con=None):
     """
     if p_con is None:
         p_con = get_db_connection()
-    if p_session_id is None:
+    if p_session_id is None or not hasattr(p_session_id, 'value') :
         create_session()
         return False
     else:
+        if p_session_id.value.isdigit() == False:
+            return False
         q_str =""" select cs_data from client_state 
             where cs_id = %(session_id)s """;
         _cur = p_con.cursor()
-        _cur.execute(q_str,{'session_id':p_session_id})
+        _cur.execute(q_str,{'session_id':p_session_id.value})
         _r = _cur.fetchall()
         if len(_r) ==0: ##the database does not have the session data create a new one
             create_session()
             return False
         _session = _r[0][0]
+        g.CLIENT_STATE = _session ##set the global client_state = to the one stored in the database
         if _session.get('TIMEOUT')< dt.utcnow() and g.ENVIRO.get('PYAPP_TO_RUN').get('security'):
+            ## the session has timeout and the app to run requiries security redirect to log in
             error('Seesion Id %s timeout, redirect to login script ')
             g.CLIENT_STATE.update({'last_command':'retry'})
             g.CLIENT_STATE.update({'PYAPP_TO_RUN':g.ENVIRO.get('PYAPP_TO_RUN')})
             g.CLIENT_STATE.update({'POST':g.POST})
             g.CLIENT_STATE.update({'GET':g.GET})
-            save_client_state(g.CLIENT_STATE, p_session_id=p_session_id)
             return client_redirect(g.APPSTACK['login'], 307,'Session Timeout log in please')
         elif _session.get('TIMEOUT')< dt.utcnow() and g.SEC['USER_AUTOLOGIN']:
+            ## session has timeout but the autologin is turned on so log the user in and continue
             if load_credentials(g.COOKIES['user'], g.COOKIES['pwd']):
                 if _session['last_command'] == 'retry':
                     g.ENVIRO.update({'PYAPP_TO_RUN':_session.get('PYAPP_TO_RUN')})
@@ -509,14 +542,21 @@ def load_session(p_session_id = None, p_con=None):
 def create_session():
     session_id = get_db_next_id('client_state_cs_id_seq')
     set_cookie('session_id', session_id)
-    g.CLIENT_STATE.update({'SESS_ID': session_id})
+    g.CLIENT_STATE.update({'SESSION_ID': session_id})
     g.CLIENT_STATE.update({'TIMEOUT': dt.utcnow() + td(seconds=g.SEC['USER_TIMER'])})
 
-def save_client_state(pdict={}, p_session_id=None, p_con=None):
+def save_client_state(pdict=g.CLIENT_STATE, p_session_id=None, p_last_command='retry', p_con=None):
     if p_con is None:
         p_con = get_db_connection()
     _cur = p_con.cursor()
-    g.CLIENT_STATE['TIMEOUT'] = dt.utcnow() + td(seconds=g.SEC['USER_TIMER'])
+
+    if p_last_command == 'retry':
+        pdict.update({'last_command':'retry' })
+        pdict.update({'PYAPP_TO_RUN':g.ENVIRO.get('PYAPP_TO_RUN')})
+    ##got get 
+    pdict.update( {'TIMEOUT' : dt.utcnow() + td(seconds=g.SEC['USER_TIMER'])})
+    pdict.update({'POST': g.POST})
+    pdict.update({'GET': g.GET})
     from json import dump
     q_sql = """ insert into client_state values (
                 %(p_session_id)s, %(pdict)s  )
@@ -526,6 +566,7 @@ def save_client_state(pdict={}, p_session_id=None, p_con=None):
     _cur.execute(q_sql, {'p_session_id': p_session_id,
                         'pdict': dump(pdict) 
                         })
+    _cur.commit()
 
 def load_public_credentials():
     pass
@@ -624,23 +665,6 @@ def error(pmessage =' not set ', psource='unkown',
         return True
     return True
 
-def load_cookies(p_list={}):
-    pass
-    #for _key, _v in sorted(p_list):
-        
-
-"""def set_cookies(p_cookie_name='', p_value='', p_expires='', 
-        p_domain='',p_secure='', p_url_path=''):
-    g.COOKIES.update({p_cookie_name: 
-            {'value':p_value,
-            'expires':p_expires,
-            'domain':p_domain,
-            'secure':p_secure,
-            'urlpath':p_url_path
-            }
-    })
-    return True"""
-
 def cookies_tuple_string(p_cdic={}):
     _return=[]
     for _k, _v in sorted(p_cdic.items()):
@@ -656,8 +680,6 @@ def cookies_tuple_string(p_cdic={}):
         _return.append(('Set-Cookie: ',vstring))
     return _return
 
-def build_cookies():
-    return True
 
 def build_template_key(pdic={}, pout='file.ctemplates', ptype='file' ):
     
@@ -697,9 +719,6 @@ def build_get_url(p_com='', p_dict={}, p_des= '',
         #url_dict.update({hex(adler32(key)):value})
 
     return 'p_base_url' + p_com + '?' + urlencode(p_dict)
-
-def reverse_adlerize(p_in_dict, p_source_dict):
-    pass
 
 def get_db_next_id(p_sequence_name='', p_con=None ):
     if p_con is None:
