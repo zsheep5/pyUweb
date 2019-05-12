@@ -157,7 +157,7 @@ APPSTACK = {
               'template_stack':'blog_editor',
               'path':'.',
               'command':'edit_blog', 
-              'security':false,
+              'security':False,
               'content_type': 'text/html',
               },
     'blog_comment':{'template_stack':'view',
@@ -208,7 +208,10 @@ APPSTACK = {
 # If templates do not use <$TEMPLATE$filename.html$TEMPLATE$>
 # flag the proceeding templates are appended at the end in order they show in the list.  
 TEMPLATE_STACK={
-    '/':['main.html', 'blog.html', 'blog_comments.html', 'search.html'],
+    '/':['main.html', 
+            'blog.html', 
+            'blog_comments.html', 
+            'search.html'],
     'view':['view_page.html',
             'base.html',
             'top_nav_bar.html',

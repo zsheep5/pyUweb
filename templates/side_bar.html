@@ -1,0 +1,51 @@
+<div id="sidebar" class="four columns">
+
+    <div class="widget widget_search">
+            <h3>Search</h3> 
+            <form action="/search_blog">
+                <input type="text"
+                        name="search_value" 
+                        value="Search here..." 
+                        onblur="if(this.value == '') { this.value = 'Search here...'; }" 
+                        onfocus="if (this.value == 'Search here...') { this.value = ''; }" 
+                        class="text-search"
+                >
+                <input type="submit" value="" class="submit-search">
+            </form>
+    </div>
+
+    <div class="widget widget_categories group">
+        <h3>Blog Categories.</h3> 
+            <ul>
+                <TMPL_LOOP name="category">
+                    <li><a href="<TMPL_VAR name="cat_url">" title=""><TMPL_VAR name="cat_name"></a>(<TMPL_VAR name="cat_count">) </li>						
+                </TMPL_LOOP>
+            </ul>
+    </div>
+
+    <div class="widget widget_text group">
+        <h3>Widget Text.</h3>
+
+        <p>holder text</p>
+    </div>
+
+    <div class="widget widget_tags">
+        <h3>Post Tags.</h3>
+
+        <div class="tagcloud group">
+            <a href="#">holder text for tags</a>
+        </div>     
+    </div>
+
+    <div class="widget widget_popular">
+        <h3>Popular Post.</h3>
+
+        <ul class="link-list">
+            <TMPL_loop name="tops">
+                <li><a href="<TMPL_VAR name="tops_url">"><TMPL_VAR name='blog_title'></a></li>
+            </TMPL_loop>                   
+        </ul>
+            
+    </div>
+    
+</div>

@@ -495,7 +495,7 @@ def log_in_page():
     return True
 
 def log_user_in():
-
+    pass
 
 def load_session(p_session_id = None, p_con=None):
     """ Returns true of stored session loads and retry command is set
@@ -679,7 +679,6 @@ def cookies_tuple_string(p_cdic={}):
             vstring += 'Path=%s;'%(_v['urlpath'])
         _return.append(('Set-Cookie: ',vstring))
     return _return
-
 
 def build_template_key(pdic={}, pout='file.ctemplates', ptype='file' ):
     
