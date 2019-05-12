@@ -10,14 +10,17 @@ https://modwsgi.readthedocs.io/en/develop/user-guides/quick-installation-guide.h
 
 The HTML redenering engine used is ctemplate-python https://github.com/zsheep5/ctemplate-python
 
+add support python wsgiserver  https://pypi.org/project/WSGIserver/
+this makes debugging easier 
+
 There is alot of work to do 
-1:cookies set and read buiding a global Dictionary cookies
+
+1:cookies set and reading are working
 
 2: user session enviroment saved between http request.  intent is to avoid pypickle use straight JSON to python dictionaries. The JSON document is stored in the Postgresql database. 
 
-3: to only use functional style web frame work
+3: avoid the use of OOP style make a more stream line functional style web frame work
 
-4: avoid the use of ORM 
 
 
 
