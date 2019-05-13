@@ -38,8 +38,11 @@ global CLIENT_STATE
 global COOKIES
 global COOKIES_EXPIRES ##number in the future until a cookie expires  
 global APPS_PATH  ## list of directories to append to the python sys path to find source files
+global CSB ##cross script block uuid must be added to all the forms and is checked during load enviro, 
+            ## is save in user enviroment. it is reset after every request so single use only. 
 
 APPS_PATH = ['/home/justin/git_hub/pyUweb/apps']
+CSB = None
 
 APACHE_ENVIRO= None
 ENVIRO={

@@ -170,10 +170,20 @@ def edit_blog():
 
 def new_blog():
     g.CONTEXT.update({'blog_id' : m.get_db_next_id("blog_blog_id_seq"),
-                    'save_blog': 'save_blog'})
+                    'save_blog': 'save_blog'}
+                    )
     return True
 
 def save_blog():
+    if 'blog_id' in g.GET and 'blog_text' in g.GET and 'blog_title' in g.GET:
+            _key = int(g.GET['blogkey'])
+            _text = g.GET.get('blog_text')
+    elif 'blog_id' in g.POST:
+           _key = int(g.Post['blogkey'])
+    else:
+        m.error('No ID key found get or post dictionaries', 'blog.save_blog')
+    
+
 
 
 def commit_blog(p_user =-1 , pblog_id =-1, p_htmltext='', p_tags='', p_title='',  ):
