@@ -46,7 +46,6 @@ def kick_start(enviro, start_response):
         if _test:
             return server_respond( poutput=g.OUTPUT, pre=None, 
             sr=start_response)
-    save_client_state()
     
     return server_respond(pstatus='500 ', 
         pcontext=[], 
@@ -69,7 +68,7 @@ def server_respond(pstatus=g.STATUS,
         poutput='',
         sr = None): 
     
-
+    save_client_state() ## save the client state prior to sending sending data
     if g.ERRORSSHOW or (pstatus != '200' and g.ERRORSSHOW):
         build_template('error', g.TEMPLATE_STACK.get('error'), False)
         error_context = {'Dump':dump_globals()}
@@ -369,11 +368,16 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
         _co = sc()
         _co.load(e.get('HTTP_COOKIE'))
         if _co.get('session_id'): ##see if the session id is set and if we have previous 
-            
             for k, v in _co.items():
                 g.COOKIES.update({k:v})
             ## load the session from the database if successful skip over te load enviro.  
             if load_session(_co.get('session_id')):  ## this always set session id
+                ## session loads sucessfully 
+                #lets check the CSB key in the saved session if valid continue with the 
+                #saved session from the database.  if not die 
+                if not check_CSB(g.GET.get('CSB')) or not check_CSB(g.POST.get('CSB')):
+                    error('CSB has expired can not continue return to root or login page')
+                    return False
                 return True
          
 
@@ -435,6 +439,10 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
     return False
 
 def check_CSB(pcsb):
+    """ antime check_CSB called the database
+    copy is purged from database regardless 
+    if it is valid or expired 
+    """ 
     q_str =""" select true from csb
 	            where csb_id = %(pcsb)s 
                 and csb_expires > now()""";
@@ -537,7 +545,7 @@ def log_user_in():
     pass
 
 def load_session(p_session_id = None, p_con=None):
-    """ Returns true of stored session loads and retry command is set
+    """ Returns true if stored session loads and retry command is set
     else returns false load enviroment should finish as normal
     """
     if p_con is None:
@@ -558,14 +566,17 @@ def load_session(p_session_id = None, p_con=None):
             return False
         _session = _r[0][0]
         g.CLIENT_STATE = _session ##set the global client_state = to the one stored in the database
-        if _session.get('TIMEOUT')< dt.utcnow() and g.ENVIRO.get('PYAPP_TO_RUN').get('security'):
-            ## the session has timeout and the app to run requiries security redirect to log in
+        if _session.get('TIMEOUT')< dt.utcnow() \
+                and g.ENVIRO.get('PYAPP_TO_RUN').get('security') \
+                and not g.SEC['USER_AUTOLOGIN']:
+            ## the session has timeout and the app to run requiries security and 
+            # the user auto login is turned off go to log in
             error('Seesion Id %s timeout, redirect to login script ')
             g.CLIENT_STATE.update({'last_command':'retry'})
             g.CLIENT_STATE.update({'PYAPP_TO_RUN':g.ENVIRO.get('PYAPP_TO_RUN')})
             g.CLIENT_STATE.update({'POST':g.POST})
             g.CLIENT_STATE.update({'GET':g.GET})
-            return client_redirect(g.APPSTACK['login'], 307,'Session Timeout log in please')
+            return client_redirect(None, 0, 'Session Timeout log in please')
         elif _session.get('TIMEOUT')< dt.utcnow() and g.SEC['USER_AUTOLOGIN']:
             ## session has timeout but the autologin is turned on so log the user in and continue
             if load_credentials(g.COOKIES['user'], g.COOKIES['pwd']):
@@ -657,9 +668,6 @@ def load_credentials(puser='', pwd='', p_con=None):
     _cur.execute(q_str,{'user_id':_r['user_id']})
     _r = _cur.fetchall()   
 
-def load_client_state():
-    pass
-
 def check_SSL(e):
     if g.SEC['SSL_REQUIRE']:
         if e.get('HTTPS', 'off') in ('on', '1'):
@@ -667,11 +675,13 @@ def check_SSL(e):
                 '307 Temporary Redirect', b'')       
     return True
 
-def client_redirect(url='', redirect_code='307', output=''): # sets the globals up 
+def client_redirect(url=None, redirect_code='307', outputbuffer='', context={}, template={}): # sets the globals up 
     #for a redirect returns false as the kick_start needs to see false to 
     # return to wsgi out of sequence
-    g.OUTPUT = output
-    g.HEADERS['status'] = redirect_code + 'Location:' + url 
+    g.OUTPUT = outputbuffer
+    g.CONTEXT=context 
+    if url is not None:
+        g.HEADERS['status'] = redirect_code + 'Location:' + url 
     return False 
 
 def log_event(mess, level='DEBUG'):
