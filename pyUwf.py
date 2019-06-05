@@ -8,6 +8,7 @@ from datetime import datetime as dt
 from datetime import timedelta as td
 from http.cookies import SimpleCookie as sc
 from http.cookies import Morsel as mc
+import mimetypes as mt 
 import uuid
 
 ##this is the main driving function it runs the below start up functions
@@ -16,7 +17,7 @@ import uuid
 def kick_start(enviro, start_response):
     if not check_paths():
         return server_respond(pstatus='500 ', 
-            poutput='Can not connect to the Database', pre=None,
+            poutput='paths declared in globals.py failsed', pre=None,
             sr=start_response)
     else:
         append_to_sys_path()
@@ -25,12 +26,22 @@ def kick_start(enviro, start_response):
             poutput='Can not connect to the Database', pre=None,
             sr=start_response)
     elif not load_enviro(enviro):
+        error('Load Enviroment return false, can not continue ')
         return server_respond(pstatus='500 ', 
-            poutput='load enviro', pre=None, sr=start_response)
+            poutput='load enviro error', pre=None, sr=start_response)
     elif not check_SSL(enviro):
         return server_respond(pstatus='500 ', 
             poutput='SSL Check failure', pre=None, sr=start_response)
     elif not match_uri_to_app():
+        ## failed to match app lets see if this requesting a file that we can serve out
+        if g.SERVE_STATIC_FILES : 
+
+            if get_static_url_file(g.GET.get('url_path'), ''):
+                mt.init()
+                return server_respond(pstatus='200 ', 
+                        g.CONTEXT, 
+                        {'Content-type':mt.guess_type(g.GET.get('url_path'), )},
+                        )
         return server_respond(pstatus='500 ', 
             poutput='URI did not match to anything on this server', pre=None,
             sr=start_response)
@@ -55,6 +66,12 @@ def kick_start(enviro, start_response):
         sr=start_response
         )
 
+def get_static_url_file(p_full_path = '' ):
+
+    os.path.isfile(p_full_path)
+def convert_url_path_server_path(ppath):
+    pass
+
 #converts the headers, enviroment, to bytes 
 # runs the template engine and converts the result to bytes
 #calls the start_reponse function passing the status and headers out
@@ -68,15 +85,15 @@ def server_respond(pstatus=g.STATUS,
         poutput='',
         sr = None): 
     
-    save_client_state() ## save the client state prior to sending sending data
+    save_session() ## save the client state prior to sending sending data
     if g.ERRORSSHOW or (pstatus != '200' and g.ERRORSSHOW):
         build_template('error', g.TEMPLATE_STACK.get('error'), False)
         error_context = {'Dump':dump_globals()}
         _ef = g.ENVIRO['TEMPLATE_CACHE_PATH'] + 'error' + g.TEMPALATE_EXTENSION
         poutput += g.TEMPLATE_ENGINE(_ef,
                 error_context,
-                g.TEMPLATE_TYPE, 
-                g.TEMPLATE_TMP_PATH
+                g.ENVIRO.get('TEMPLATE_TYPE'), 
+                g.ENVIRO.get('TEMPLATE_TMP_PATH')
             )
 
     _head = list(pheaders.items()) # wsgi wants this as list 
@@ -201,8 +218,8 @@ def run_pyapp(papp_filename='',
             try :
                 g.OUTPUT= g.TEMPLATE_ENGINE(g.TEMPLATE_TO_RENDER, 
                             g.CONTEXT, 
-                            g.TEMPLATE_TYPE, 
-                            g.TEMPLATE_TMP_PATH)
+                            g.ENVIRO.get('TEMPLATE_TYPE'), 
+                            g.ENVIRO.get('TEMPLATE_TMP_PATH'))
                 g.HEADERS['Content-Type']= pcontent_type
                 return True
             except AttributeError as e :
@@ -226,14 +243,14 @@ def run_pyapp(papp_filename='',
 def add_globals_to_Context():
     #add the enviroment and headers 
     g.CONTEXT.update({'HEADERS': g.HEADERS})
-    g.CONTEXT.update({'IMAGES':g.ENVIRO['IMAGES']})
-    g.CONTEXT.update({'DOCS':g.ENVIRO['DOCS']})
-    g.CONTEXT.update({'STATIC':g.ENVIRO['STATIC']})
-    g.CONTEXT.update({'MEDIA':g.ENVIRO['MEDIA']})
-    g.CONTEXT.update({'SITE_NAME':g.ENVIRO['SITE_NAME']})
-    g.CONTEXT.update({'URL':'http://'+g.ENVIRO['URL']})
-    g.CONTEXT.update({'URLS':'https://'+g.ENVIRO['URL']})
-    g.CONTEXT.update({'APPURL':g.ENVIRO['PROTOCOL'] + g.ENVIRO['URL'] + g.ENVIRO['SCRIPT_NAME']} )
+    g.CONTEXT.update({'IMAGES':g.ENVIRO.get('IMAGES','')})
+    g.CONTEXT.update({'DOCS':g.ENVIRO.get('DOCS','')})
+    g.CONTEXT.update({'STATIC':g.ENVIRO.get('STATIC','')})
+    g.CONTEXT.update({'MEDIA':g.ENVIRO.get('MEDIA','')})
+    g.CONTEXT.update({'SITE_NAME':g.ENVIRO.get('SITE_NAME','NOT SET')})
+    g.CONTEXT.update({'URL':'http://'+g.ENVIRO.get('URL','localhost')})
+    g.CONTEXT.update({'URLS':'https://'+g.ENVIRO.get('URL','localhost')})
+    g.CONTEXT.update({'APPURL':g.ENVIRO['PROTOCOL'] + g.ENVIRO.get('URL','localhost')+ '/' + g.ENVIRO.get('SCRIPT_NAME','')} )
     g.CONTEXT.update({'sec':g.SEC})
     g.CONTEXT.update({'CSB':g.CSB})
     return True
@@ -278,7 +295,6 @@ def check_app_in_appstack():
     return False
 
 def build_template(papp_name='', ptstack=[], pupdate_global=True ):
-    error('enter_build_template' )
     _error_mess = ''
     if pupdate_global:
         g.TEMPLATE_TO_RENDER = g.ENVIRO['TEMPLATE_CACHE_PATH'] + papp_name + g.TEMPALATE_EXTENSION
@@ -291,12 +307,14 @@ def build_template(papp_name='', ptstack=[], pupdate_global=True ):
     for  _i in  ptstack: 
         _fp = g.ENVIRO['TEMPLATE_PATH']+_i 
         _rstring = '<TEMPLATE name="%s"/>' % (_i)
-        error(_rstring)
         if os.path.isfile(_fp):
             _tp = open(_fp, 'r')
             _tp.seek(0)
             if _bts.find(_rstring) == -1:
-                _bts += _tp.read()
+                if _bts.find('</body>') == -1:
+                    _bts += _tp.read()
+                else :
+                     _bts = _bts.replace(_rstring, _tp.read() + '</body>' )
             else :
                 _bts = _bts.replace(_rstring, _tp.read())
         else:
@@ -357,11 +375,16 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
     if len(g.ENVIRO['URI_PATH'])<1:
         g.ENVIRO['URI_PATH'] = bytes_to_text(e.get('REQUEST_URI'))
 
-    g.ENVIRO['PROTOCOL']= 'http://'
-    g.ENVIRO['STATIC']['furlpath']=g.ENVIRO['PROTOCOL']+g.ENVIRO['URL']+g.ENVIRO['STATIC']['urlpath']
-    g.ENVIRO['IMAGES']['furlpath']=g.ENVIRO['PROTOCOL']+g.ENVIRO['URL']+g.ENVIRO['IMAGES']['urlpath']
-    g.ENVIRO['DOCS']['furlpath']=g.ENVIRO['PROTOCOL']+  g.ENVIRO['URL']+g.ENVIRO['DOCS']['urlpath']
-    g.ENVIRO['MEDIA']['furlpath']=g.ENVIRO['PROTOCOL']+ g.ENVIRO['URL']+g.ENVIRO['MEDIA']['urlpath']
+    if not change_base_url( bytes_to_text(e.get('HTTP_HOST', '') )
+                        , bytes_to_text(e.get('SERVER_PORT') )):
+        return False
+
+    g.ENVIRO.update({'PROTOCOL': identify_protocol(e.get('SERVER_PROTOCOL','http://'))})
+
+    g.ENVIRO['STATIC']['furlpath']=g.ENVIRO.get('PROTOCOL')+ g.ENVIRO.get('URL') + g.ENVIRO['STATIC']['urlpath']
+    g.ENVIRO['IMAGES']['furlpath']=g.ENVIRO.get('PROTOCOL')+ g.ENVIRO.get('URL') + g.ENVIRO['IMAGES']['urlpath']
+    g.ENVIRO['DOCS'] ['furlpath']=g.ENVIRO.get('PROTOCOL') +  g.ENVIRO.get('URL') + g.ENVIRO['DOCS']  ['urlpath']
+    g.ENVIRO['MEDIA']['furlpath']=g.ENVIRO.get('PROTOCOL') +  g.ENVIRO.get('URL') + g.ENVIRO['MEDIA'] ['urlpath']
     
     _co = None
     if e.get('HTTP_COOKIE'):
@@ -403,6 +426,8 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
         g.POST.update({'CONTENT_TYPE': cgi.parse_header(e.get['CONTENT_TYPE'])})
         if check_CSB(g.POST.get('CSB')):
             return True
+        else: 
+            error('Cross Script Key was not found or not passed with the POST failing', 'pyUwf.Func')
         return False
     elif e.get('REQUEST_METHOD').upper() == 'GET':
         _url = bytes_to_text(e.get('REQUEST_URI'))
@@ -433,9 +458,11 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
                     bytes_to_text(value)
                 })
                 g.GET['QUERY_STRING_COUNT']+=1
-        if check_CSB(g.GET.get('CSB')):
-            return True
-        return False
+            if check_CSB(g.GET.get('CSB')):
+                return True
+            else:
+                error('Cross Script Key was not passed with the GET query failing', 'pyUwf.Func')
+        return True
     return False
 
 def check_CSB(pcsb):
@@ -446,7 +473,8 @@ def check_CSB(pcsb):
     q_str =""" select true from csb
 	            where csb_id = %(pcsb)s 
                 and csb_expires > now()""";
-    _cur = CONN.get('PG1').cursor()
+    _con = g.CONN.get('PG1')
+    _cur =_con.cursor();
     _cur.execute(q_str,{'pcsb':pcsb})
     _r = _cur.fetchall()
     if len(_r) > 0:
@@ -455,17 +483,17 @@ def check_CSB(pcsb):
         _return = False
     q_str = """ delete from csb where csb_id = %(pcsb)s """
     _cur.execute(q_str,{'pcsb':pcsb})
-    _cur.commit()
+    _con.commit()
     return _return 
-
 
 def save_CSB(pcsb):
     q_str =""" insert into csb values ( %(session_id)s 
                 now() + interval '30 minutes' )""";
-    _cur = g.CONN.get('PG1').cursor()
+    _con = g.CONN.get('PG1')
+    _cur = _con.cursor();
     g.CSB = uuid.uuid1().hex
     _cur.execute(q_str,{'session_id': g.SEC['USER_ID']+ g.CSB})
-    _cur.commit()
+    _con.commit()
     return True
 
 def bytes_to_text(_p, encode=g.ENVIRO['ENCODING']):
@@ -474,7 +502,7 @@ def bytes_to_text(_p, encode=g.ENVIRO['ENCODING']):
     return _p
 
 def connect_to_db(host='127.0.0.1', 
-                    db='g_family', 
+                    db='blog', 
                     user='justin', 
                     pwd='', 
                     port=5432, 
@@ -531,8 +559,8 @@ def check_credentials(papp_to_run = '', user_id= -1):
                     'Application requires Security log in please')
     return True
     
-def log_in_page():
-    save_client_state()
+def load_login_page():
+    save_session()
     ##clear the context and outputs
     g.CONTEXT={}
     g.CONTEXT.update({"user_name":g.COOKIES.get('user_name')})
@@ -595,31 +623,35 @@ def create_session():
     g.CLIENT_STATE.update({'SESSION_ID': session_id})
     g.CLIENT_STATE.update({'TIMEOUT': dt.utcnow() + td(seconds=g.SEC['USER_TIMER'])})
 
-def save_client_state(pdict=g.CLIENT_STATE, p_session_id=None, p_last_command='retry', p_con=None):
+def save_session(pdict=None, p_session_id=None, p_last_command='retry', p_con=None):
     if p_con is None:
         p_con = get_db_connection()
     _cur = p_con.cursor()
+
+    if p_session_id is None:
+        p_session_id = get_db_next_id('client_state_cs_id_seq')
+    
+    if pdict is None:
+        pdict = g.CLIENT_STATE
 
     if p_last_command == 'retry':
         pdict.update({'last_command':'retry' })
         pdict.update({'PYAPP_TO_RUN':g.ENVIRO.get('PYAPP_TO_RUN')})
     ##got get 
-    pdict.update( {'TIMEOUT' : dt.utcnow() + td(seconds=g.SEC['USER_TIMER'])})
+    pdict.update( {'TIMEOUT' : str(dt.utcnow() + td(seconds=g.SEC['USER_TIMER']))})
     pdict.update({'POST': g.POST})
     pdict.update({'GET': g.GET})
-    from json import dump
+    from json import dumps
     q_sql = """ insert into client_state values (
                 %(p_session_id)s, %(pdict)s  )
-                on conflict do Update
+                on conflict (cs_id) do Update
                 set cs_data = %(pdict)s
              """
     _cur.execute(q_sql, {'p_session_id': p_session_id,
-                        'pdict': dump(pdict) 
+                        'pdict': dumps(pdict) 
                         })
-    _cur.commit()
+    p_con.commit()
 
-def load_public_credentials():
-    pass
 
 def load_credentials(puser='', pwd='', p_con=None):
     if p_con is None:
@@ -889,8 +921,8 @@ def check_paths():
     making sure they exists
     """
     try :
-        if not os.path.exists(g.TEMPLATE_TMP_PATH):
-            os.makedirs(g.TEMPLATE_TMP_PATH, 0o755)
+        if not os.path.exists(g.ENVIRO.get('TEMPLATE_TMP_PATH')):
+            os.makedirs(g.ENVIRO.get('TEMPLATE_TMP_PATH', 0o755))
 
         if not os.path.exists(g.ENVIRO.get('TEMPLATE_PATH')):
             os.makedirs(g.ENVIRO.get('TEMPLATE_PATH'), 0o755)
@@ -921,4 +953,31 @@ def append_to_sys_path():
     for _p in g.APPS_PATH:
         path.append(_p)
 
+def change_base_url(pchange_to='', pport=80):
+    
+    #does the host protocol contain the port number some webservers have the port number in the http_host_name 
+    have_port =pchange_to.find(':')
+    if have_port>0:
+        pchange_to = pchange_to[0:have_port] 
+    if pchange_to not in g.ALLOWED_HOST_NAMES :
+        error('Can Not change BASE URL not list in the allowed host')
+        return False
+    if pchange_to is not None:
+        if pport == 80:
+            g.ENVIRO.update({'URL': pchange_to} )
+            return True
+        else:
+            g.ENVIRO.update({'URL': pchange_to + ':' + str(pport)})
+            return True
+    return False
+
+def identify_protocol (p_protocol):
+    if  p_protocol == 'HTTP/1.1':
+        return 'http://'
+    elif  p_protocol == 'HTTP':
+        return 'http://'
+    elif  p_protocol == 'HTTPS':
+        return 'https://' 
+    dd = ''
+    dd.find(':')
 #print(break_apart_dic(g.APPSTACK, '' ))

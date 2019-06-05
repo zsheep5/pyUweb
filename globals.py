@@ -41,17 +41,20 @@ global APPS_PATH  ## list of directories to append to the python sys path to fin
 global CSB ##cross script block uuid must be added to all the forms and is checked during load enviro, 
             ## is save in user enviroment. it is reset after every request so single use only. 
 
-APPS_PATH = ['/home/justin/git_hub/pyUweb/apps']
+base_directory = '/home/MAGWERKS.COM/justin/github/pyUweb/'
+#base_directory = '/home/justin/git_hub/pyUweb/'
+
+APPS_PATH = [base_directory+'apps']
 CSB = None
 
 APACHE_ENVIRO= None
 ENVIRO={
-    'DOCS':{'urlpath':'/documents', 'filepath':'/home/justin/git_hub/pyUweb/static/documents', 'furlpath':''},
+    'DOCS':{'urlpath':'/documents', 'filepath':base_directory+'static/documents', 'furlpath':''},
     'LOG_LEVEL': 'DEBUG',
     'ENCODING':'utf-8',
     'ERROR_RETURN_CLIENT':True,
     'ERROR_LOG':'system',
-    'MEDIA':{'urlpath':'/media', 'filepath':'/home/justin/git_hub/pyUweb/static/media', 'furlpath':''},
+    'MEDIA':{'urlpath':'/media', 'filepath':base_directory+'static/media', 'furlpath':''},
     'MEMCACHE_USE':False, 
     'PYAPP_TO_RUN':'',
     'PROTOCOL':'http',
@@ -61,17 +64,20 @@ ENVIRO={
     'URI_PATH_NOT_MATCHED':'',
     'SERVER_NAME':'',
     'SERVER_PORT':'',
-    'STATIC':{'urlpath':'/static', 'filepath':'/home/justin/git_hub/pyUweb/static/', 'furlpath':''},
-    'IMAGES':{'urlpath':'/static/images', 'filepath':'/home/justin/git_hub/pyUweb/static/', 'furlpath':''},
-    'TEMPLATE_PATH':'/home/justin/git_hub/pyUweb/templates/',
-    'TEMPLATE_CACHE_PATH':'/home/justin/git_hub/pyUweb/cache/pre_render/',
+    'STATIC':{'urlpath':'/static', 'filepath':base_directory+'static/', 'furlpath':''},
+    'IMAGES':{'urlpath':'/static/images', 'filepath':base_directory+'static/images', 'furlpath':''},
+    'TEMPLATE_PATH':base_directory+'templates/',
+    'TEMPLATE_CACHE_PATH':base_directory+'cache/pre_render/', # location where the file are stored before being passed through template_engine
     'TEMPLATE_CACHE_AGING_SECONDS':30,
+    'TEMPLATE_TMP_PATH':base_directory+'cache/post_render/', # location where the file are stored post rendering through template_engine
+    'TEMPLATE_TYPE': 'file',  #ctemplate works off a string containing the html sent to it or path/filename to the html template 
     'URL_CURRENT_PATH':'',
     'URL':'192.168.1.72',
 }
 ERRORSTACK =[]
 ERRORSSHOW = True
 
+ALLOWED_HOST_NAMES= ['localhost', '127.0.0.1', 'g-server', '192.168.1.72']
 
 
 if ENVIRO['MEMCACHE_USE']:
@@ -83,8 +89,8 @@ from pyctemplate import compile_template  #default template engine
 
 TEMPLATE_ENGINE = compile_template  #map the function to this global 
 TEMPLATE_TO_RENDER = '' ##
-TEMPLATE_TMP_PATH = '/home/justin/git_hub/pyUweb/cache/post_render/' # staging folder for templates to be written to 
-TEMPLATE_TYPE = 'file'  #ctemplate works off a string containing the html sent to it or path/filename to the html template 
+  
+ 
 
 HEADERS={
     'Content-Type':'text/plain;',

@@ -6,8 +6,10 @@ from sys import argv
 ## where pyUweb.py file is located and the
 ## path(s) to website applications 
 from sys import path
-path.append('/home/justin/git_hub/pyUweb')
 
+path.append('/home/MAGWERKS.COM/justin/github/pyUweb/')
+
+#path.append('/home/justin/git_hub/pyUweb/')
 from globals import APPSTACK as _as
 
 def parse_args(p_argv):
@@ -27,15 +29,11 @@ def parse_args(p_argv):
 
     return( options, args)
 
-def Dispachters():
-    return 
-
-
 if __name__ == "__main__":
     (options, args)= parse_args(argv[1:])
 
     ar = importlib.import_module(options.module)
-    
+
     _dis = {}
     
     if hasattr(ar, options.func) : 
