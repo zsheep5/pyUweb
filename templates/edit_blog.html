@@ -12,11 +12,15 @@
   
    <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5/ckeditor.js"> </script>
    <form action="TMPL_VAR name=" method="post">   
-      <textarea name="content" id="editor"></textarea>
+      <input type="text" name="title" id="title"/><br>
+      <input type="hidden" name="blog_id" value="<TMPL_VAR name = "blog_id">" />
+      <input type="hidden" name="CSB" value="<TMPL_VAR name = "CSB">" />
+      <textarea name="content" id="content"></textarea>
+      <
    </form>
    <script>
          ClassicEditor
-             .create( document.querySelector( '#editor' ),
+             .create( document.querySelector( '#content' ),
                {
                   toolbar: [ 'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 
                            'numberedList', 'blockQuote' ],

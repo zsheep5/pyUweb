@@ -46,15 +46,15 @@ base_directory = '/home/MAGWERKS.COM/justin/github/pyUweb/'
 
 APPS_PATH = [base_directory+'apps']
 CSB = None
-
+SERVE_STATIC_FILES= True ## this tells the system it will be servering the static files instead the webserver
 APACHE_ENVIRO= None
 ENVIRO={
-    'DOCS':{'urlpath':'/documents', 'filepath':base_directory+'static/documents', 'furlpath':''},
+    'DOCS':{'urlpath':'/documents', 'filepath':base_directory+'static/documents/', 'furlpath':''},
     'LOG_LEVEL': 'DEBUG',
     'ENCODING':'utf-8',
     'ERROR_RETURN_CLIENT':True,
     'ERROR_LOG':'system',
-    'MEDIA':{'urlpath':'/media', 'filepath':base_directory+'static/media', 'furlpath':''},
+    'MEDIA':{'urlpath':'/media', 'filepath':base_directory+'static/media/', 'furlpath':''},
     'MEMCACHE_USE':False, 
     'PYAPP_TO_RUN':'',
     'PROTOCOL':'http',
@@ -65,7 +65,7 @@ ENVIRO={
     'SERVER_NAME':'',
     'SERVER_PORT':'',
     'STATIC':{'urlpath':'/static', 'filepath':base_directory+'static/', 'furlpath':''},
-    'IMAGES':{'urlpath':'/static/images', 'filepath':base_directory+'static/images', 'furlpath':''},
+    'IMAGES':{'urlpath':'/static/images', 'filepath':base_directory+'static/images/', 'furlpath':''},
     'TEMPLATE_PATH':base_directory+'templates/',
     'TEMPLATE_CACHE_PATH':base_directory+'cache/pre_render/', # location where the file are stored before being passed through template_engine
     'TEMPLATE_CACHE_AGING_SECONDS':30,
@@ -93,7 +93,7 @@ TEMPLATE_TO_RENDER = '' ##
  
 
 HEADERS={
-    'Content-Type':'text/plain;',
+    'Content-Type':'text/html;',
     'charset':'UTF-8',
 }
 
@@ -243,6 +243,7 @@ TEMPLATE_STACK={
             'top_nav_bar.html',
             'side_bar.html',
             'comments.html',
+            'js.html'
         ],
     'list':['list_page.html',
             'base.html',

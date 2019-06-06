@@ -33,14 +33,13 @@ def kick_start(enviro, start_response):
         return server_respond(pstatus='500 ', 
             poutput='SSL Check failure', pre=None, sr=start_response)
     elif not match_uri_to_app():
-        ## failed to match app lets see if this requesting a file that we can serve out
+        ## failed to match to an app lets see if this request is an file that we can serve out
         if g.SERVE_STATIC_FILES : 
-
-            if get_static_url_file(g.GET.get('url_path'), ''):
-                mt.init()
-                return server_respond(pstatus='200 ', 
-                        g.CONTEXT, 
-                        {'Content-type':mt.guess_type(g.GET.get('url_path'), )},
+            if get_static_url_file(g.GET.get('url_path')):
+                return server_respondf(pstatus='200 ', 
+                        pheaders=g.HEADERS,
+                        poutput= g.OUTPUT,
+                        sr=start_response
                         )
         return server_respond(pstatus='500 ', 
             poutput='URI did not match to anything on this server', pre=None,
@@ -55,7 +54,8 @@ def kick_start(enviro, start_response):
                 pcontent_type=  _ap['content_type']
             )
         if _test:
-            return server_respond( poutput=g.OUTPUT, pre=None, 
+            return server_respond( poutput=g.OUTPUT, 
+                pre=None, 
             sr=start_response)
     
     return server_respond(pstatus='500 ', 
@@ -67,10 +67,35 @@ def kick_start(enviro, start_response):
         )
 
 def get_static_url_file(p_full_path = '' ):
+    _filepath = convert_url_path_server_path(p_full_path)
+    if os.path.isfile(_filepath):
+        _fp = open(_filepath, 'rb')
+        g.OUTPUT = _fp.read()
+        _fp.close()
+        _type, _encode = mt.guess_type(_filepath)
+        g.HEADERS = {'Content-type': _type}
+        return True
+    return False
 
-    os.path.isfile(p_full_path)
-def convert_url_path_server_path(ppath):
-    pass
+def convert_url_path_server_path(p_upath=''):
+    if p_upath[0:1] in ('/', "\\" ):
+        p_upath = p_upath[1:]
+    _url_path = p_upath.split('/')
+    for key, value in sorted(g.ENVIRO.items()):
+        if not isinstance(value, dict):
+            continue 
+        _check = value.get('urlpath',None)
+        if _check is None:
+            continue
+        _compare = ''
+        _count = 1
+        for parts in _url_path:
+            _compare = _compare + '/' + parts
+            if _compare == _check:
+                return value.get('filepath', '') + '/'.join(_url_path[_count:])
+            _count +=1
+    return ''
+
 
 #converts the headers, enviroment, to bytes 
 # runs the template engine and converts the result to bytes
@@ -90,11 +115,14 @@ def server_respond(pstatus=g.STATUS,
         build_template('error', g.TEMPLATE_STACK.get('error'), False)
         error_context = {'Dump':dump_globals()}
         _ef = g.ENVIRO['TEMPLATE_CACHE_PATH'] + 'error' + g.TEMPALATE_EXTENSION
-        poutput += g.TEMPLATE_ENGINE(_ef,
+
+        _errorout = g.TEMPLATE_ENGINE(_ef,
                 error_context,
                 g.ENVIRO.get('TEMPLATE_TYPE'), 
                 g.ENVIRO.get('TEMPLATE_TMP_PATH')
             )
+        poutput = poutput.replace('</body>', _errorout + '</body>', 1)
+
 
     _head = list(pheaders.items()) # wsgi wants this as list 
     _head.extend( [('Set-Cookie', str(v).strip() +";" ) for k, v in pcookies.items()]) #put in the cookies 
@@ -104,6 +132,18 @@ def server_respond(pstatus=g.STATUS,
     _head.append( ('Content-Length', str(len(_outputB))))
     sr(pstatus, _head)
     return [_outputB]
+
+##server responds for returning files and other content that is not Python App
+def server_respondf(pstatus=g.STATUS, 
+        pheaders=g.HEADERS,
+        poutput=None,
+        sr = None):
+    _head = list(pheaders.items()) # wsgi wants this as list 
+    
+    ##add the content length just before returning wsgi module
+    _head.append( ('Content-Length', str(len(poutput))))
+    sr(pstatus, _head)
+    return [poutput]
 
 def dump_globals():
     output = 'WebServer_ENVIRO \r\n'
@@ -282,7 +322,7 @@ def match_uri_to_app():
         else:
             _notused = _parts + '/' + _notused
     ## exhausted all matches going to the root
-    if '/' in g.APPSTACK:
+    if '/' in g.APPSTACK and (len(g.ENVIRO['URI_PATH'])>0 and g.SERVE_STATIC_FILES==False) :
         g.ENVIRO['PYAPP_TO_RUN'] = g.APPSTACK['/']
         return True
     ## no root command has been setup 
@@ -980,4 +1020,5 @@ def identify_protocol (p_protocol):
         return 'https://' 
     dd = ''
     dd.find(':')
+
 #print(break_apart_dic(g.APPSTACK, '' ))

@@ -170,7 +170,7 @@ def edit_blog():
 
 def new_blog():
     g.CONTEXT.update({'blog_id' : m.get_db_next_id("blog_blog_id_seq"),
-                    'save_blog': 'save_blog'}
+                    'submit_command': 'save_blog'}
                     )
     return True
 
