@@ -12,16 +12,17 @@
 		<a class="mobile-btn" href="#" title="Hide navigation">Hide Menu</a>
 	   	<div class="row">    		            
 			   	<ul id="nav" class="nav">
-			      	<li><a href="index.html">Home</a></li>
-			      	<li class="has-children"><a href="#">Dropdown</a>
-	                  <ul>
-								<!--<TMPL_IF name="varname" value="testvalue">-->
-									<li><a href="/new_blog">New Blog</a></li>
-								<!--</TMPL_IF>-->
-	                     <li><a href="#">List Of Bogs</a></li>
-	                     <li><a href="#"></a></li>
-	                  </ul>
-	               </li>
+						<li><a href="blog">Home</a></li>
+							<TMPL_IF name="SEC.USER_LOGGEDIN" value="True">
+								<li class="has-children"><a href="#">User Tools</a>
+									<ul>
+										<li><a href="/new_blog">New Blog</a></li>
+										<li><a href="#">List Of Bogs</a></li>
+										<li><a href="#"></a></li>
+									</ul>
+								</li>
+							</TMPL_IF>
+	               
 	               <li><a href="demo.html">Demo</a></li>	
 	               <li><a href="archives.html">Archives</a></li>
 			      	<li class="has-children current"><a href="single.html">Blog</a>
@@ -30,7 +31,7 @@
 	                     <li><a href="single.html">Single Blog</a></li>	                     
 	                  </ul>
 			      	</li>		      	
-			      	<li><a href="page.html">Page</a></li>
+			      	<li><a href="log_in">Login</a></li>
 			   	</ul> <!-- end #nav -->			   	 
 	   	</div> 
 	</nav> <!-- end #nav-wrap -->  	     

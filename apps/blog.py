@@ -182,9 +182,6 @@ def save_blog():
            _key = int(g.Post['blogkey'])
     else:
         m.error('No ID key found get or post dictionaries', 'blog.save_blog')
-    
-
-
 
 def commit_blog(p_user =-1 , pblog_id =-1, p_htmltext='', p_tags='', p_title='',  ):
     q_str =  """ insert into values
