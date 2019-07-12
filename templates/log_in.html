@@ -5,11 +5,11 @@
 
    <!-- Content
    ================================================== -->
-   <form name="login" action="log_in" method="post" value="<TMPL_VAR name="user_name">">
+   <form name="login" action="log_in" method="post"> 
         Username:<br>
-        <input type="text" name="user" id="user">
+        <input type="text" name="user_name" id="user_name" >
         Password:<br>
-        <input type="password" name="pwd" id="user">
+        <input type="password" name="pwd" id="pwd">
         Remeber me:<br>
         <input type="checkbox" name="remeber" id="remeber">
         <input type="hidden" id="csb" name="csb" value="<TMPL_VAR name="CSB">">

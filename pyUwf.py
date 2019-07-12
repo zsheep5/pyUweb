@@ -294,6 +294,7 @@ def add_globals_to_Context():
     g.CONTEXT.update({'APPURL':g.ENVIRO['PROTOCOL'] + g.ENVIRO.get('URL','localhost')+ '/' + g.ENVIRO.get('SCRIPT_NAME','')} )
     g.CONTEXT.update({'SEC':g.SEC})
     g.CONTEXT.update({'CSB':g.CSB})
+    g.CONTEXT.update({'COOKIES':g.COOKIES})
     return True
         
 def match_uri_to_app():
@@ -572,7 +573,6 @@ def create_template_engine():
 
 def get_template_engine():
     return g.TEMP_ENGINE
-
 
 
 def check_SSL(e):

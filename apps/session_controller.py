@@ -25,16 +25,19 @@ def check_user_credtials(sec={}):
 
 def load_login_page():
     save_session()
-    ##clear the context and outputs
-    g.CONTEXT={}
+    ##reset the context 
+    g.CONTEXT= m.add_globals_to_Context()
     g.CONTEXT.update({"user_name":g.COOKIES.get('user_name')})
-    g.OUTPUT = ''
+    #Change the  template to be rendered
     m.build_template('log_in', g.TEMPLATE_STACK.get('log_in'))
 
     return True
 
 def log_in():
-    pass
+    if g.POST.get('user_name') and g.POST.get('pwd'):
+        
+    else:
+        return load_login_page()
 
 def load_session(p_session_id = None, p_con=None):
     """ Returns true if stored session loads and retry command is set
@@ -199,3 +202,36 @@ def cookies_tuple_string(p_cdic={}):
             vstring += 'Path=%s;'%(_v['urlpath'])
         _return.append(('Set-Cookie: ',vstring))
     return _return
+
+def create_user(p_con, p_name, p_last, p_pwd, p_email='', p_type='user', 
+                p_grp = 0, p_displayname='unknown'  ):
+    if p_con is None:
+        p_con = get_db_connection()
+
+    q_str = """
+        insert into users ( 
+                user_id,
+                user_name ,
+                user_last,
+                user_email ,
+                user_type ,
+                user_pwd ,
+                user_grp,
+                user_displayname )
+            values
+            ( default, %(name)s, %(last)s, %(email)s, %(type)s,
+             crypt(%(pwd)s::text, gen_salt('md5')), %(grp)s, %(displayname)s),
+
+    """
+
+     _topass = {'name':p_name , 'last':p_last, 
+                'pwd':p_pwd,  'email': p_email ,
+                'type':p_type, 'grp':p_grp,
+                'displayname': p_displayname 
+            }
+    con = p_con 
+    cur = con.cursor()
+    cur.execute(q_str, _topass)
+    cur = p_con.cursor()
+    cur.execute(q_str)
+    p_con.commit()
