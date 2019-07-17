@@ -97,7 +97,8 @@ HEADERS={
     'charset':'UTF-8',
 }
 
-COOKIES={}
+from http import cookies
+COOKIES= cookies.BaseCookie()
 COOKIES_EXPIRES=30
 
 GET={}
@@ -123,6 +124,7 @@ SEC={
 from datetime import datetime, timedelta
 CLIENT_STATE = {
     'last_command':'',
+    'prev_state':'',
     'USER_ID':'',
     'TIMEOUT':datetime.utcnow() + timedelta(seconds=SEC['USER_TIMER'])
     }
@@ -202,7 +204,7 @@ APPSTACK = {
     'log_in':{'template_stack':'log_in',
              'filename':'session_controller', 
              'path':'.', 
-             'command':'login_in', 
+             'command':'log_in', 
              'security':False,
              'content_type': 'text/html',
              },

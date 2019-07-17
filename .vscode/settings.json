@@ -1,5 +1,7 @@
 {
-    "python.pythonPath": "/home/MAGWERKS.COM/justin/.local/share/virtualenvs/pyUweb-JXBwyo4S/bin/python",
     "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true
+    "python.linting.enabled": true,
+    "python.linting.pylintArgs":["--ignored-modules=pyctemplate",
+				"--extension-pkg-whitelist=pyctemplate",
+				]
 }

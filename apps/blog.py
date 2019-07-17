@@ -25,12 +25,11 @@ def view():
     elif 'blogkey' in g.POST:
            _key = int(g.Post['blogkey'])
     if get_blog_by_id(_key):
-        return False
-    get_comments(_key)
-    get_blog_view_counts()
-    get_cats()
-    
-    return True
+        get_comments(_key)
+        get_blog_view_counts()
+        get_cats()
+        return True
+    return False
 
 def search_blog():
     _text = ''
@@ -230,26 +229,21 @@ def get_cats():
     g.CONTEXT.update({'category': _cat})
 
 def get_blog_view_counts():
-    q_str = """ select blog_id, blog_title, 
-                        coalesce(bc_views, 0) as bc_views 
+    q_str = """ select 'name' as Name, 
+                        blog_title || coalesce(bc_views, 0)::text as LinkText
+                        '?id='||blog_id::text as url
                 from blog 
                     left join blog_counter on blog_id = bc_blog_id
-                order by 3 desc limit 5  """
+                order by blog_counter desc limit 5  """
     con = g.CONN['PG1'] 
     cur = con.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(q_str)
     _rec = cur.fetchall()
-    _tops = []
-    for _r in _rec:
-        _tops.append({'top_url': build_get_url('view',
-                                { 'blog_id':_r['blog_id']}
-                                ),
-                        'blog_title':_r['blog_title'],
-                    }
-                )
-    g.CONTEXT.update({'tops': _tops})  
+    g.CONTEXT.update({'top_blogs':  m.build_url_links(_rec)})  
 
 def up_blog_view_count(p_id=-1):
+    if p_id < 0:
+        return True
     q_str = """ insert into blog_counter values
         ( %(p_id)s, 1 ) 
         on conflict  blog_counter_pkey 

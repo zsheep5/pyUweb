@@ -1,4 +1,5 @@
-import wsgiserver, importlib
+""" starts a python webserver primary purpose is to simplify debuging within the python module
+"""
 from optparse import OptionParser as op
 from sys import argv
 
@@ -6,11 +7,13 @@ from sys import argv
 ## where pyUweb.py file is located and the
 ## path(s) to website applications 
 from sys import path
-
 path.append('/home/MAGWERKS.COM/justin/github/pyUweb/')
-
 #path.append('/home/justin/git_hub/pyUweb/')
+
+import importlib
+import wsgiserver
 from globals import APPSTACK as _as
+
 
 def parse_args(p_argv):
 

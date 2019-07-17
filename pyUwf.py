@@ -45,28 +45,28 @@ def kick_start(enviro, start_response):
             poutput='URI did not match to anything on this server', pre=None,
             sr=start_response)
     else:
-        _ap =  g.ENVIRO['PYAPP_TO_RUN']
-        _test = run_pyapp ( 
-                papp_filename = _ap['filename'], 
-                papp_path =     _ap['path'],
-                papp_command=   _ap['command'], 
+        _ap=  g.ENVIRO['PYAPP_TO_RUN']
+        _test = run_pyapp( 
+                papp_filename= _ap['filename'],
+                papp_path=     _ap['path'],
+                papp_command=   _ap['command'],
                 ptemplate_stack=_ap['template_stack'],
                 pcontent_type=  _ap['content_type']
             )
         if _test:
-            return server_respond( poutput=g.OUTPUT, 
-                pre=None, 
-            sr=start_response)
+            return server_respond(poutput=g.OUTPUT,
+                pre=None,
+                sr=start_response)
     
-    return server_respond(pstatus='500 ', 
-        pcontext=[], 
-        pheaders={'Content-type': 'text/plain'}, 
-        pre=None, 
+    return server_respond(pstatus='500 ',
+        pcontext=[],
+        pheaders={'Content-type': 'text/plain'},
+        pre=None,
         poutput='Internal Server Error No Command Sent',
         sr=start_response
         )
 
-def get_static_url_file(p_full_path = '' ):
+def get_static_url_file(p_full_path=''):
     _filepath = convert_url_path_server_path(p_full_path)
     if os.path.isfile(_filepath):
         _fp = open(_filepath, 'rb')
@@ -101,16 +101,16 @@ def convert_url_path_server_path(p_upath=''):
 # runs the template engine and converts the result to bytes
 #calls the start_reponse function passing the status and headers out
 # and returns output reponse to be passed back to mod_wsgi
-def server_respond(pstatus=g.STATUS, 
-        pcontext=g.CONTEXT, 
+def server_respond(pstatus=g.STATUS,
+        pcontext=g.CONTEXT,
         pheaders=g.HEADERS,
         penviro=g.ENVIRO,
         pcookies=g.COOKIES,
         pre=None,
         poutput='',
-        sr = None): 
+        sr=None):
     
-    session.save_session() ## save the client state prior to sending sending data
+    session.save_session(g.CLIENT_STATE, g.CLIENT_STATE.get('SESSION_ID')) ## save the client state prior to sending sending data
     if g.ERRORSSHOW or (pstatus != '200' and g.ERRORSSHOW):
         build_template('error', g.TEMPLATE_STACK.get('error'), False)
         error_context = {'Dump':dump_globals()}
@@ -125,7 +125,9 @@ def server_respond(pstatus=g.STATUS,
 
 
     _head = list(pheaders.items()) # wsgi wants this as list 
-    _head.extend( [('Set-Cookie', str(v).strip() +";" ) for k, v in pcookies.items()]) #put in the cookies 
+    cc =[('Set-Cookie', str(v).strip() +";" ) for k, v in pcookies.items()] #put in the cookies 
+    aa =[('Set-Cookie', g.COOKIES.output(attrs=None, header='', sep=''))]
+    _head.extend( aa)
     _outputB = poutput.encode(encoding='utf-8', errors='replace')
 
     ##add the content length just before returning wsgi module
@@ -175,14 +177,18 @@ def dump_globals():
     if len(g.GET) > 0:
         output += "\r\n Converted GET commands\r\n" 
         for key, value in sorted(g.GET.items()):
-            if value is not None:
+            if value is not None :
                 output += "%s:%s \r\n" %(key,value)
 
     if len(g.CONTEXT) > 0:
         output += "\r\n context\r\n" 
         for key, value in sorted(g.CONTEXT.items()):
-            if value is not None:
+            if value is not None and type(value) not in (list, dict, tuple) :
                 output += "%s:%s \r\n" %(key,value)
+    
+    if len(g.COOKIES) > 0:
+        output += "\r\n Cookies\r\n" 
+        output += g.COOKIES.output(sep='\r\n')
 
     if len(g.APPSTACK) > 0:
         output += "\r\n Application Stack\r\n" 
@@ -200,9 +206,6 @@ def dump_globals():
         output += "\r\n Error Stack:\r\n"
         for _est in g.ERRORSTACK:
             output += "\r\n".join(_est)
-
-  
-
 
     output += "\r\n Template to be Rendered: %s \r\n" % (g.TEMPLATE_TO_RENDER)
     output += "Security Context is not dumped \r\n"
@@ -253,28 +256,30 @@ def run_pyapp(papp_filename='',
     add_globals_to_Context()
     ar = importlib.import_module(papp_filename, papp_command) 
     if hasattr(ar, papp_command) : 
-        getattr(ar, papp_command)()
-        if to_render :
-            try :
-                g.CONTEXT.update({'CSB':save_CSB(g.SEC['USER_ID'])})
-                g.OUTPUT= g.TEMPLATE_ENGINE(g.TEMPLATE_TO_RENDER, 
-                            g.CONTEXT, 
-                            g.ENVIRO.get('TEMPLATE_TYPE'), 
-                            g.ENVIRO.get('TEMPLATE_TMP_PATH'))
-                g.HEADERS['Content-Type']= pcontent_type
-                return True
-            except AttributeError as e :
-                error("""Failed to render Template %s 
-                        Render Engine Error %s
-                        typically the context structure is wrong %s""" %
-                        (g.TEMPLATE_TO_RENDER, 
-                        str(e),
-                        str(g.CONTEXT) 
+        if getattr(ar, papp_command)(): ##if the app returns false no template will be rendered
+                    # logic here is so the calledpyapp can recursive call run_pyapp
+                    # return false to block the rendering engine and clearing the output buffer.   
+            if to_render :
+                try :
+                    g.CONTEXT.update({'CSB':save_CSB(g.SEC['USER_ID'])})
+                    g.OUTPUT= g.TEMPLATE_ENGINE(g.TEMPLATE_TO_RENDER, 
+                                g.CONTEXT, 
+                                g.ENVIRO.get('TEMPLATE_TYPE'), 
+                                g.ENVIRO.get('TEMPLATE_TMP_PATH'))
+                    g.HEADERS['Content-Type']= pcontent_type
+                    return True
+                except AttributeError as e :
+                    error("""Failed to render Template %s 
+                            Render Engine Error %s
+                            typically the context structure is wrong %s""" %
+                            (g.TEMPLATE_TO_RENDER, 
+                            str(e),
+                            str(g.CONTEXT) 
+                            )
                         )
-                    )
-                return False
-        else:
-            error('Not Critical: ran the app but did not have template to process ')
+                    return False
+            else:
+                error('Not Critical: ran the app but did not have template to process ')
         return True
     else:
         error('Error could not find  %s command in %s '%(papp_command, papp_filename), '')    
@@ -425,12 +430,12 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
 
     g.ENVIRO['STATIC']['furlpath']=g.ENVIRO.get('PROTOCOL')+ g.ENVIRO.get('URL') + g.ENVIRO['STATIC']['urlpath']
     g.ENVIRO['IMAGES']['furlpath']=g.ENVIRO.get('PROTOCOL')+ g.ENVIRO.get('URL') + g.ENVIRO['IMAGES']['urlpath']
-    g.ENVIRO['DOCS'] ['furlpath']=g.ENVIRO.get('PROTOCOL') +  g.ENVIRO.get('URL') + g.ENVIRO['DOCS']  ['urlpath']
+    g.ENVIRO['DOCS']['furlpath']=g.ENVIRO.get('PROTOCOL') +  g.ENVIRO.get('URL') + g.ENVIRO['DOCS']  ['urlpath']
     g.ENVIRO['MEDIA']['furlpath']=g.ENVIRO.get('PROTOCOL') +  g.ENVIRO.get('URL') + g.ENVIRO['MEDIA'] ['urlpath']
     
     _co = session.load_cookies(e.get('HTTP_COOKIE'))
     if _co:
-        if _co.get('session_id'): ##see if the session id is set and if we have previous 
+        if _co.get('session_id'): ##see if the session id is set and if we have previous get/post event to process
             for k, v in _co.items():
                 g.COOKIES.update({k:v})
             ## load the session from the database if successful skip over te load enviro.  
@@ -442,7 +447,8 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
                     error('CSB has expired can not continue return to root or login page')
                     return False
                 return True
-         
+    else : ##have no session established or CSB need to create them and set the cookies
+        session.create_session()     
 
     script = ''
     command = ''
@@ -527,7 +533,7 @@ def check_CSB(pcsb):
     return _return 
 
 def save_CSB(puser_id):
-    q_str =""" insert into csb values ( %(session_id)s 
+    q_str =""" insert into csb values ( %(session_id)s, 
                 now() + interval '30 minutes' )"""
     _con = g.CONN.get('PG1')
     _cur = _con.cursor()
@@ -574,7 +580,6 @@ def create_template_engine():
 def get_template_engine():
     return g.TEMP_ENGINE
 
-
 def check_SSL(e):
     if g.SEC['SSL_REQUIRE']:
         if e.get('HTTPS', 'off') in ('on', '1'):
@@ -593,7 +598,6 @@ def client_redirect(url=None, redirect_code='307', outputbuffer='', context={}, 
 
 def log_event(mess, level='DEBUG'):
     import logging
-    logs = logging()
     return True
 
 def error(pmessage =' not set ', psource='unkown', 
@@ -647,18 +651,41 @@ def break_apart_dic(pdic={}, p_prefix=''):
         _output = _output + '%s</TMPL_LOOP>' +chr(10) 
     return _output 
 
-def build_get_url(p_com='', p_dict={}, p_des= '', 
-    p_base_url=g.ENVIRO['PROTOCOL'] + g.ENVIRO['URL'] + g.ENVIRO['SCRIPT_NAME'] ):
+def build_url_links(p_descrip_command={}, p_url_path=None, 
+                p_app_command=None, p_protocol=None, p_host=None, p_port=None):
+    
+    """creates url(s) from dictionary
+    p_descrip_command is dictionary looking for key values  containing the 
+            Name: for URL to be reference in the template, 
+            LinkText: of the URL and the 
+            URL also can be a GET command the ?id=1&view_state=1234..etc;
+    p_url_path: default will use the current url path the app is using or can be passed in
+    p_app_command: default will use the current app being processed by the application stack  
+    p_host: default is the passed in host name from webserver enviroment
+    p_port: default is the passed in port from the webserver enviroment
+    returns: a disction  
     """
-        Takes in a distionary converts the keys to adler checksum
-    """
-    if len(p_dict) ==0:
+    if len(p_descrip_command) ==0:
         return None
-    #url_dict={}
-    #for key, value in sorted(pdic.items()):
-        #url_dict.update({hex(adler32(key)):value})
+    if p_protocol is None:
+        p_protocol = g.ENVIRO.get('PROTOCOL')
+    if p_port is None:
+        if str(p_port) == '80' and  str(g.ENVIRO.get('SERVER_PORT')) == '80':
+            p_port =  ''
+    else:
+        p_port = ':%s'%p_port
+    if p_host is None:
+        p_host = g.ENVIRO.get('SERVER_NAME')  
+    if p_url_path is None:
+        p_url_path = g.ENVIRO.get('URI_PATH')
+    if p_app_command is None:
+        p_app_command = g.ENVIRO.get('PYAPP_TO_RUN')
+    r_urls = {}
+    for bl in p_descrip_command :
+        _url_string = """<a href="%s%s%s/%s/%s/%s">%s</a>""" %(p_protocol,p_host,p_port,p_url_path, p_app_command, bl['url'], bl['linktext'] )
+        r_urls.update( {bl['name']:urlencode(_url_string)})
 
-    return 'p_base_url' + p_com + '?' + urlencode(p_dict)
+    return r_urls.update 
 
 def get_db_next_id(p_sequence_name='', p_con=None ):
     if p_con is None:
