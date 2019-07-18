@@ -229,8 +229,8 @@ def get_cats():
     g.CONTEXT.update({'category': _cat})
 
 def get_blog_view_counts():
-    q_str = """ select 'name' as Name, 
-                        blog_title || coalesce(bc_views, 0)::text as LinkText
+    q_str = """ select blog_title as Name, 
+                        blog_title || coalesce(bc_views, 0)::text as LinkText,
                         '?id='||blog_id::text as url
                 from blog 
                     left join blog_counter on blog_id = bc_blog_id
@@ -239,7 +239,7 @@ def get_blog_view_counts():
     cur = con.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(q_str)
     _rec = cur.fetchall()
-    g.CONTEXT.update({'top_blogs':  m.build_url_links(_rec)})  
+    g.CONTEXT.update({'web_urls':  m.build_url_links(_rec)})  
 
 def up_blog_view_count(p_id=-1):
     if p_id < 0:

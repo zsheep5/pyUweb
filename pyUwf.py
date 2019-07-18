@@ -675,11 +675,11 @@ def build_url_links(p_descrip_command={}, p_url_path=None,
     else:
         p_port = ':%s'%p_port
     if p_host is None:
-        p_host = g.ENVIRO.get('SERVER_NAME')  
+        p_host = g.ENVIRO.get('')  
     if p_url_path is None:
         p_url_path = g.ENVIRO.get('URI_PATH')
     if p_app_command is None:
-        p_app_command = g.ENVIRO.get('PYAPP_TO_RUN')
+        p_app_command = g.ENVIRO.get('URL')
     r_urls = {}
     for bl in p_descrip_command :
         _url_string = """<a href="%s%s%s/%s/%s/%s">%s</a>""" %(p_protocol,p_host,p_port,p_url_path, p_app_command, bl['url'], bl['linktext'] )
