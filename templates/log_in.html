@@ -6,14 +6,12 @@
    <!-- Content
    ================================================== -->
    <form name="login" action="log_in" method="post"> 
-        Username:<br>
-        <input type="text" name="user_name" id="user_name" >
-        Password:<br>
-        <input type="password" name="pwd" id="pwd">
-        Remeber me:<br>
+        Username:<input type="text" name="user_name" id="user_name" > <br>
+        Password:<input type="password" name="pwd" id="pwd"><br>
+        Remeber me:
         <input type="checkbox" name="remeber" id="remeber">
-        <input type="hidden" id="csb" name="csb" value="<TMPL_VAR name="CSB">">
-       
+        <input type="hidden" id="CSB" name="CSB" value="<TMPL_VAR name="CSB">">
+        <input type="submit" value="Submit">
    </form> 
 
     <!-- Footer

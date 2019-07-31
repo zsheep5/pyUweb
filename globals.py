@@ -46,6 +46,7 @@ base_directory = '/home/MAGWERKS.COM/justin/github/pyUweb/'
 
 APPS_PATH = [base_directory+'apps']
 CSB = None
+CSB_STATUS = False  ##
 SERVE_STATIC_FILES= True ## this tells the system it will be servering the static files instead the webserver
 APACHE_ENVIRO= None
 ENVIRO={
@@ -64,6 +65,7 @@ ENVIRO={
     'URI_PATH_NOT_MATCHED':'',
     'SERVER_NAME':'',
     'SERVER_PORT':'',
+    'HTTP_HOST':'',
     'STATIC':{'urlpath':'/static', 'filepath':base_directory+'static/', 'furlpath':''},
     'IMAGES':{'urlpath':'/static/images', 'filepath':base_directory+'static/images/', 'furlpath':''},
     'TEMPLATE_PATH':base_directory+'templates/',
@@ -72,7 +74,7 @@ ENVIRO={
     'TEMPLATE_TMP_PATH':base_directory+'cache/post_render/', # location where the file are stored post rendering through template_engine
     'TEMPLATE_TYPE': 'file',  #ctemplate works off a string containing the html sent to it or path/filename to the html template 
     'URL_CURRENT_PATH':'',
-    'URL':'192.168.1.72',
+    
 }
 ERRORSTACK =[]
 ERRORSSHOW = True
@@ -155,6 +157,13 @@ APPSTACK = {
             'filename':'blog', 
             'path':'.', 
             'command':'view',
+            'security':False,
+            'content_type':'text/html',
+            },
+    'view_category':{'template_stack':"view", 
+            'filename':'blog', 
+            'path':'.', 
+            'command':'view_category',
             'security':False,
             'content_type':'text/html',
             },
@@ -256,7 +265,7 @@ TEMPLATE_STACK={
             'top_nav_bar.html',
             'js.html',
         ],
-    'log_in':['login_html',
+    'log_in':['log_in.html',
             'base.html',
             'top_nav_bar.html',
             'js.html'

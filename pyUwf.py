@@ -1,7 +1,7 @@
 import psycopg2, psycopg2.extras
 import cgi, os, importlib, time
 import pyctemplate   #template engine
-from urllib.parse import urlparse, urlencode
+from urllib.parse import quote_plus, urlparse, urlencode, parse_qs
 from zlib import adler32
 import globals as g 
 from datetime import datetime as dt 
@@ -95,7 +95,6 @@ def convert_url_path_server_path(p_upath=''):
                 return value.get('filepath', '') + '/'.join(_url_path[_count:])
             _count +=1
     return ''
-
 
 #converts the headers, enviroment, to bytes 
 # runs the template engine and converts the result to bytes
@@ -252,6 +251,10 @@ def run_pyapp(papp_filename='',
     else:
         error("No Template Defined for %s " % ( papp_filename ), 'run_pyapp')
     
+    #lets check the CSB key in the saved session if valid continue with the 
+    #saved session from the database.  if not die 
+    if not check_CSB(g.CSB):
+        error('CSB has expired or is not present should redirect to root or login page the CSB created aknew')
     
     add_globals_to_Context()
     ar = importlib.import_module(papp_filename, papp_command) 
@@ -294,9 +297,7 @@ def add_globals_to_Context():
     g.CONTEXT.update({'STATIC':g.ENVIRO.get('STATIC','')})
     g.CONTEXT.update({'MEDIA':g.ENVIRO.get('MEDIA','')})
     g.CONTEXT.update({'SITE_NAME':g.ENVIRO.get('SITE_NAME','NOT SET')})
-    g.CONTEXT.update({'URL':'http://'+g.ENVIRO.get('URL','localhost')})
-    g.CONTEXT.update({'URLS':'https://'+g.ENVIRO.get('URL','localhost')})
-    g.CONTEXT.update({'APPURL':g.ENVIRO['PROTOCOL'] + g.ENVIRO.get('URL','localhost')+ '/' + g.ENVIRO.get('SCRIPT_NAME','')} )
+    g.CONTEXT.update({'APPURL':g.ENVIRO['PROTOCOL'] + g.ENVIRO.get('HTTP_HOST')+ '/' + g.ENVIRO.get('SCRIPT_NAME','')} )
     g.CONTEXT.update({'SEC':g.SEC})
     g.CONTEXT.update({'CSB':g.CSB})
     g.CONTEXT.update({'COOKIES':g.COOKIES})
@@ -428,34 +429,30 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
 
     g.ENVIRO.update({'PROTOCOL': identify_protocol(e.get('SERVER_PROTOCOL','http://'))})
 
-    g.ENVIRO['STATIC']['furlpath']=g.ENVIRO.get('PROTOCOL')+ g.ENVIRO.get('URL') + g.ENVIRO['STATIC']['urlpath']
-    g.ENVIRO['IMAGES']['furlpath']=g.ENVIRO.get('PROTOCOL')+ g.ENVIRO.get('URL') + g.ENVIRO['IMAGES']['urlpath']
-    g.ENVIRO['DOCS']['furlpath']=g.ENVIRO.get('PROTOCOL') +  g.ENVIRO.get('URL') + g.ENVIRO['DOCS']  ['urlpath']
-    g.ENVIRO['MEDIA']['furlpath']=g.ENVIRO.get('PROTOCOL') +  g.ENVIRO.get('URL') + g.ENVIRO['MEDIA'] ['urlpath']
+    g.ENVIRO['STATIC']['furlpath']= build_url_root_path() + g.ENVIRO['STATIC']['urlpath']
+    g.ENVIRO['IMAGES']['furlpath']= build_url_root_path() + g.ENVIRO['IMAGES']['urlpath']
+    g.ENVIRO['DOCS']['furlpath']= build_url_root_path() + g.ENVIRO['DOCS']['urlpath']
+    g.ENVIRO['MEDIA']['furlpath']=build_url_root_path() + g.ENVIRO['MEDIA']['urlpath']
     
     _co = session.load_cookies(e.get('HTTP_COOKIE'))
     if _co:
         if _co.get('session_id'): ##see if the session id is set and if we have previous get/post event to process
             for k, v in _co.items():
                 g.COOKIES.update({k:v})
-            ## load the session from the database if successful skip over te load enviro.  
-            if session.load_session(_co.get('session_id')):  ## this always set session id
-                ## session loads sucessfully 
-                #lets check the CSB key in the saved session if valid continue with the 
-                #saved session from the database.  if not die 
-                if not check_CSB(g.GET.get('CSB')) or not check_CSB(g.POST.get('CSB')):
-                    error('CSB has expired can not continue return to root or login page')
-                    return False
+            ## load the session from the database if successful skip over  loading the GET and POST enviroments
+            if session.load_session(_co.get('session_id')): 
                 return True
-    else : ##have no session established or CSB need to create them and set the cookies
+    else : ##have no session established 
         session.create_session()     
 
+    #Load Parse and Process the POST and GET commands
     script = ''
     command = ''
     qs =[]
     if e.get('REQUEST_METHOD').upper() == 'POST':
-        script = ( e.get('SCRIPT_URL').encode('iso-8859-1').decode(errors='replace') or 
-            e.get('REDIRECT_URL').encode('iso-8859-1').decode(errors='replace')
+        script = ( e.get('REQUEST_URI', '').encode('iso-8859-1').decode(errors='replace') or
+                e.get('SCRIPT_NAME', '').encode('iso-8859-1').decode(errors='replace') or 
+                e.get('REDIRECT_URL', '').encode('iso-8859-1').decode(errors='replace')
             )
         g.POST.update({'url_path': script})
         g.POST.update({'POST_COUNT':0})
@@ -464,17 +461,13 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
         except (ValueError):
             request_body_size = 0
         if request_body_size > 0:
-            form_data = cgi.parse_qs(e['wsgi.input'].read(request_body_size))
-            for key, value in form_data:
-                g.POST.update({bytes_to_text(key): bytes_to_text(value)})
+            form_data = parse_qs(e['wsgi.input'].read(request_body_size))
+            for key, value in form_data.items():
+                g.POST.update({bytes_to_text(key): [bytes_to_text(i) for i in value]})
                 g.POST['POST_COUNT']+= 1
-
-        g.POST.update({'CONTENT_TYPE': cgi.parse_header(e.get['CONTENT_TYPE'])})
-        if check_CSB(g.POST.get('CSB')):
-            return True
-        else: 
-            error('Cross Script Key was not found or not passed with the POST failing', 'pyUwf.Func')
-        return False
+            g.CSB = g.POST.get('CSB', [0])[0]
+        g.POST.update({'CONTENT_TYPE': e.get('CONTENT_TYPE')})
+        return True
     elif e.get('REQUEST_METHOD').upper() == 'GET':
         _url = bytes_to_text(e.get('REQUEST_URI'))
         g.GET.update({"PATH_TO_APP":bytes_to_text(e.get('mod_wsgi.path_info')) })
@@ -483,31 +476,27 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
             return True
         else :
             script = ( _url.encode('iso-8859-1').decode(errors='replace') or 
-                _url.encode('iso-8859-1').decode(errors='replace')
+                        _url.encode('iso-8859-1').decode(errors='replace')
                     )      
         g.GET.update({'url_path': script})
         qs = e.get('QUERY_STRING')
         g.GET.update({'QUERY_STRING_COUNT':0})
-
         if isinstance(qs, bytes): ##url encoded data typically ascii
             try:
-                qs = cgi.parse_qsl(qs.decode(g.ENVIRO['ENCODING']))
+                qs = parse_qs(qs.decode(g.ENVIRO['ENCODING']))
             except UnicodeDecodeError:
                 # ... but some user agents are misbehaving :-(
-                qs = cgi.parse_qsl(qs.decode('iso-8859-1'))
+                qs = parse_qs(qs.decode('iso-8859-1'))
         else:
-            qs=cgi.parse_qsl(qs)
+            qs=parse_qs(qs)
         if len(qs) > 0:
-            for key, value in qs:
+            for key, value in qs.items():
                 g.GET.update({
                     bytes_to_text(key) :
-                    bytes_to_text(value)
+                    [bytes_to_text(i) for i in value]
                 })
                 g.GET['QUERY_STRING_COUNT']+=1
-            if check_CSB(g.GET.get('CSB')):
-                return True
-            else:
-                error('Cross Script Key was not passed with the GET query failing', 'pyUwf.Func')
+            g.CSB = g.POST.get('CSB', [0])[0]
         return True
     return False
 
@@ -525,8 +514,10 @@ def check_CSB(pcsb):
     _r = _cur.fetchall()
     if len(_r) > 0:
         _return = True
+        g.CSB_STATUS=True
     else:
         _return = False
+        g.CSB_STATUS=False
     q_str = """ delete from csb where csb_id = %(pcsb)s """
     _cur.execute(q_str,{'pcsb':pcsb})
     _con.commit()
@@ -651,6 +642,14 @@ def break_apart_dic(pdic={}, p_prefix=''):
         _output = _output + '%s</TMPL_LOOP>' +chr(10) 
     return _output 
 
+def build_url_root_path():
+    """builds the current root URL path http(s)://server(:port)/
+    returns string"""
+    _path = g.ENVIRO.get('PROTOCOL') + g.ENVIRO.get('HTTP_HOST')
+    if  str(g.ENVIRO.get('SERVER_PORT', 80)) != '80':
+        _path += ':'+ g.ENVIRO.get('SERVER_PORT')
+    return _path 
+
 def build_url_links(p_descrip_command={}, p_url_path=None, 
                 p_app_command=None, p_protocol=None, p_host=None, p_port=None):
     
@@ -658,7 +657,8 @@ def build_url_links(p_descrip_command={}, p_url_path=None,
     p_descrip_command is dictionary looking for key values  containing the 
             Name: for URL to be reference in the template, 
             LinkText: of the URL and the 
-            URL also can be a GET command the ?id=1&view_state=1234..etc;
+            URL also can be a GET command the ?id=1&view_state=1234..etc
+            NOTE any slashed in the URL dictionary converted quoted safe ;
     p_url_path: default will use the current url path the app is using or can be passed in
     p_app_command: default will use the current app being processed by the application stack  
     p_host: default is the passed in host name from webserver enviroment
@@ -672,20 +672,25 @@ def build_url_links(p_descrip_command={}, p_url_path=None,
     if p_port is None:
         if str(p_port) == '80' and  str(g.ENVIRO.get('SERVER_PORT')) == '80':
             p_port =  ''
+        else :
+            p_port = ':%s'%g.ENVIRO.get('SERVER_PORT')
     else:
         p_port = ':%s'%p_port
     if p_host is None:
-        p_host = g.ENVIRO.get('')  
+        p_host = g.ENVIRO.get('HTTP_HOST')  
     if p_url_path is None:
-        p_url_path = g.ENVIRO.get('URI_PATH')
+        p_url_path =  g.ENVIRO.get('URI_PATH') +'/'
     if p_app_command is None:
-        p_app_command = g.ENVIRO.get('URL')
+        p_app_command = ''
+    else :
+        p_app_command += p_app_command + '/'
     r_urls = {}
     for bl in p_descrip_command :
-        _url_string = """<a href="%s%s%s/%s/%s/%s">%s</a>""" %(p_protocol,p_host,p_port,p_url_path, p_app_command, bl['url'], bl['linktext'] )
-        r_urls.update( {bl['name']:urlencode(_url_string)})
+        _link = p_protocol+p_host + p_port + p_url_path + p_app_command, quote_plus(bl['url'])
+        _url_string = """<a href="%s">%s</a>""" %(_link, bl['linktext'])
+        r_urls.update( {bl['name']:_url_string})
 
-    return r_urls.update 
+    return r_urls 
 
 def get_db_next_id(p_sequence_name='', p_con=None ):
     if p_con is None:
@@ -851,10 +856,11 @@ def change_base_url(pchange_to='', pport=80):
         return False
     if pchange_to is not None:
         if pport == 80:
-            g.ENVIRO.update({'URL': pchange_to} )
+            g.ENVIRO.update({'HTTP_HOST': pchange_to} )
             return True
         else:
-            g.ENVIRO.update({'URL': pchange_to + ':' + str(pport)})
+            g.ENVIRO.update({'HTTP_HOST': pchange_to})
+            g.ENVIRO.update({'SERVER_PORT' : str(pport)})
             return True
     return False
 

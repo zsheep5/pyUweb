@@ -27,7 +27,7 @@ def check_user_credtials(sec={}):
 def load_login_page():
     save_session()
     ##reset the context 
-    g.CONTEXT= m.add_globals_to_Context()
+    m.add_globals_to_Context()
     g.CONTEXT.update({"user_name":g.COOKIES.get('user_name')})
     #Change the  template to be rendered
     m.build_template('log_in', g.TEMPLATE_STACK.get('log_in'))
@@ -36,7 +36,7 @@ def load_login_page():
 
 def log_in():
     if g.POST.get('user_name') and g.POST.get('pwd'):
-        if load_credentials(g.POST.get('user_name'),  g.POST.get('pwd') ):
+        if load_credentials(g.POST.get('user_name',[0])[0],  g.POST.get('pwd',[0])[0] ):
             ##set the current session so it knows its logged in
             if g.CLIENT_STATE.get('last_command') =='retry':
                 load_prev_state(g.CLIENT_STATE.get('prev_state'))
@@ -47,8 +47,16 @@ def log_in():
                     papp_command=   _ap['command'],
                     ptemplate_stack=_ap['template_stack'],
                     pcontent_type=  _ap['content_type']
-            )
-            return False
+                )
+            ##have no previouse state to restore go back to the root
+            _ap = g.APPSTACK['/']
+            return m.run_pyapp( 
+                    papp_filename= _ap['filename'],
+                    papp_path=     _ap['path'],
+                    papp_command=   _ap['command'],
+                    ptemplate_stack=_ap['template_stack'],
+                    pcontent_type=  _ap['content_type']
+                )
     else:
         return load_login_page()
 
@@ -59,8 +67,7 @@ def change_pwd_page():
         if g.POST.GET('new_pwd') != g.POST.get('confirm'): 
             m.error('New passwords do not match can not change', 'session_controller.py function change_pwd_page')
         if change_pwd( g.POST.get('user_name'), g.POST.GET('new_pwd')):
-            return True
-    
+            return True    
 
 def change_pwd(p_userid, p_newpwd ) :
     
@@ -116,7 +123,9 @@ def load_session(p_session_id = None, p_con=None):
                 return True
         elif _timeout > dt.utcnow():
             g.SEC = _session.get('SEC')
-            return True
+            if len(_session.get('last_command','')) > 0:
+                load_prev_state(_session)
+                return True
     return False
 
 def load_prev_state(p_session={}):
@@ -170,20 +179,21 @@ def load_credentials(puser='', pwd='', p_con=None):
         p_con = m.get_db_connection()
     _cur = p_con.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-    q_str ="""select user_id user_name, user_last , user_email ,
-                 user_type, user_pwd from users
-                 where crypt( %(pwd)s, user_pwd)
-                 and user_id = (%puser)s
+    q_str ="""select user_id, user_name, user_last , user_email ,
+                 user_type, user_pwd, user_displayname from users
+                 where crypt( %(pwd)s, user_pwd) = user_pwd
+                 and (user_displayname = %(puser)s or user_email = %(puser)s)
             """
     _cur.execute(q_str, {'pwd':pwd, 'puser':puser})
     _rec = _cur.fetchall()
-    if len(_rec) > 0:
+    if len(_rec) == 1:  ##if there is more than one record this a big problem with the database  
         _r=_rec[0]
         g.SEC.update({'USER_ID':_r['user_id']})
         g.SEC.update({'USER_NAME':_r['user_name']+ ' ' +_r['user_last']})
         g.SEC.update({'USER_EMAIL':_r['user_email']})
         g.SEC.update({'USER_PWD':_r['user_pwd']})
         g.SEC.update({'USER_LOGGEDIN':True})
+        g.SEC.update({'DISPLAY_NAME':_r['user_displayname']})
     else:
         return False
 
@@ -239,7 +249,6 @@ def load_cookies(pcookie_string=''):
     _t = bCookie()
     _t.load(pcookie_string)
     return g.COOKIES
-
 
 def cookies_tuple_string(p_cdic={}):
     _return=[]

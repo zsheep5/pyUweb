@@ -205,28 +205,24 @@ def commit_blog(p_user =-1 , pblog_id =-1, p_htmltext='', p_tags='', p_title='',
 
 
 def get_cats():
-    q_str= """ select  cat_id, cat_short, 
-                coalesce(bl_count, 0) as cat_count
-        from category 
-            left join ( select count(*) as bl_count, 
-                            bl_cat_id from blog_cats 
-                        group by bl_cat_id ) bl
-            on bl_cat_id = cat_id 
+    q_str= """ select  '?id=' || cat_id::text as url, cat_short as Name, 
+                cat_long || ' ' ||  coalesce(bl_count, 0)::text as LinkText
+            from category 
+                left join ( select count(*) as bl_count, 
+                                bl_cat_id from blog_cats 
+                                group by bl_cat_id ) bl
+                    on bl_cat_id = cat_id 
     """
     con = g.CONN['PG1'] 
     cur = con.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(q_str)
     _rec = cur.fetchall()
-    _cat = []
-    for _r in _rec:
-        _cat.append({'cat_url': build_get_url('view_cat',
-                                { 'cat_id':_r['cat_id']}
-                                ),
-                        'cat_name':_r['cat_short'],
-                        'cat_count': _r['cat_count']
-                    }
-                )
+    _cat = m.build_url_links( _rec, p_app_command='view_category')
+    
     g.CONTEXT.update({'category': _cat})
+
+def view_category():
+    pass
 
 def get_blog_view_counts():
     q_str = """ select blog_title as Name, 
