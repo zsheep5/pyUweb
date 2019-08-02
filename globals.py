@@ -40,6 +40,10 @@ global COOKIES_EXPIRES ##number in the future until a cookie expires
 global APPS_PATH  ## list of directories to append to the python sys path to find source files
 global CSB ##cross script block uuid must be added to all the forms and is checked during load enviro, 
             ## is save in user enviroment. it is reset after every request so single use only. 
+global HTTP_REDIRECT # variable to hold the url to redirect the client to.  
+# If it is NOT NONE it will send the redirect to the client 
+
+HTTP_REDIRECT = None
 
 base_directory = '/home/MAGWERKS.COM/justin/github/pyUweb/'
 #base_directory = '/home/justin/git_hub/pyUweb/'

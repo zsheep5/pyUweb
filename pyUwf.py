@@ -110,7 +110,10 @@ def server_respond(pstatus=g.STATUS,
         sr=None):
     
     session.save_session(g.CLIENT_STATE, g.CLIENT_STATE.get('SESSION_ID')) ## save the client state prior to sending sending data
-    if g.ERRORSSHOW or (pstatus != '200' and g.ERRORSSHOW):
+    if g.HTTP_REDIRECT is not None:  ## something has set the global Redirect varaible clear output
+        client_redirect(url=g.HTTP_REIRECT)  ## this was most likely already called eariler but we will call it again to make sure the headers are set
+        poutput = '' #
+    elif g.ERRORSSHOW or (pstatus != '200' and g.ERRORSSHOW):
         build_template('error', g.TEMPLATE_STACK.get('error'), False)
         error_context = {'Dump':dump_globals()}
         _ef = g.ENVIRO['TEMPLATE_CACHE_PATH'] + 'error' + g.TEMPALATE_EXTENSION
@@ -211,18 +214,32 @@ def dump_globals():
 
     return output
 
-
-## papp_filename is the python module being dynamically imported 
-## papp_path is the path to the module it should follow python . notation
-## papp_command the function in the module that will be executed. 
-## the function needs to return a boolean type 
-## the function should make changes to the global variables set in
-## globals.py file.  
 def run_pyapp(papp_filename='', 
                 papp_path='.', 
                 papp_command='init', 
                 ptemplate_stack='',
-                pcontent_type='' ):
+                pcontent_type='', 
+                pcheck_CSB = True):
+    """
+    papp_filename: is the python module being dynamically imported 
+    papp_path: is the path to the module it should follow python . notation
+    papp_command: the function in the module that will be executed. 
+    ptemplate_stack: template stack that is rendered by the app
+    pcontect_type: html content type retuned to the browes 
+    pcheck_CSB: this stage check the CSB entry to the one in the server if it does not no other 
+    processing is done default is to check the CSB.
+
+    the function must to return a boolean type.  if this function is called recursively 
+    there is logic built in to redirect or call a different app to render a different result. 
+    Method ONE is a recursive call must return False to prevent the Output buffer 
+        from being re-rendered and just call run_pyapp setting the parameters as nessarcy 
+    Method TWO return true set  the  global context  and template_stack varabiles to be rendered
+    Method THREE is set the global varabel redirect which is check prior in the server return function, 
+        clears the output buffer,  you can use a query string or users_session to do additional procesing
+
+    Keep in mind the CSB entry may have already checked and deleted from the database there may be a need
+    to set the pcheck_CSB to false on recurvise run_pyapp to allow additional processing  
+    """
     if papp_filename == '':
         error('No App_name passed in Failed', 'run_pyapp')
         return False
@@ -585,7 +602,8 @@ def client_redirect(url=None, redirect_code='307', outputbuffer='', context={}, 
     g.CONTEXT=context 
     if url is not None:
         g.HEADERS['status'] = redirect_code + 'Location:' + url 
-    return False 
+        g.HTTP_REDIRECT = url
+    return True  
 
 def log_event(mess, level='DEBUG'):
     import logging

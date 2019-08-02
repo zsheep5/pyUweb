@@ -24,41 +24,54 @@ def check_credentials(papp_to_run = '', user_id= -1):
 def check_user_credtials(sec={}):
     return True
 
-def load_login_page():
+def load_login_page(p_message=''):
     save_session()
     ##reset the context 
     m.add_globals_to_Context()
+    g.CONTEXT.update({'login_message': p_message})
     g.CONTEXT.update({"user_name":g.COOKIES.get('user_name')})
     #Change the  template to be rendered
     m.build_template('log_in', g.TEMPLATE_STACK.get('log_in'))
 
     return True
 
-def log_in():
+def log_in(p_redirect_app=None, pload_prev_state=True, 
+            plogin_message='Successfully Logged in ', plogin_error= 'User and Password did match any of records please try again'):
+    """ redirect_app: is the application state to redirect the client to after successfully loggin in
+        pload_prev_state = load the save session state after succuessfly  loging in. Note redirect and  load previous state can not be sett at the same time
+        load prev state takes precedences over the redirect
+        plogin_message message to display on success 
+        plogin_error message to display on errors 
+    """ 
+    _message = plogin_message
     if g.POST.get('user_name') and g.POST.get('pwd'):
         if load_credentials(g.POST.get('user_name',[0])[0],  g.POST.get('pwd',[0])[0] ):
             ##set the current session so it knows its logged in
-            if g.CLIENT_STATE.get('last_command') =='retry':
+            if g.CLIENT_STATE.get('last_command') =='retry' and pload_prev_state==True:
                 load_prev_state(g.CLIENT_STATE.get('prev_state'))
                 _ap=  g.ENVIRO.get('PYAPP_TO_RUN')
-                return m.run_pyapp( 
+                m.run_pyapp( 
                     papp_filename= _ap['filename'],
                     papp_path=     _ap['path'],
                     papp_command=   _ap['command'],
                     ptemplate_stack=_ap['template_stack'],
                     pcontent_type=  _ap['content_type']
                 )
-            ##have no previouse state to restore go back to the root
+                return False
+            ##have no previouse state to restore go back to the page root
             _ap = g.APPSTACK['/']
-            return m.run_pyapp( 
+            m.run_pyapp( 
                     papp_filename= _ap['filename'],
                     papp_path=     _ap['path'],
                     papp_command=   _ap['command'],
                     ptemplate_stack=_ap['template_stack'],
                     pcontent_type=  _ap['content_type']
                 )
-    else:
-        return load_login_page()
+            return False ##must return false now as 
+        else:
+            _message  = plogin_error
+            ## can add more logic for reset password and fail count to lock the account that it maybe matching to
+    return load_login_page(_message)
 
 def change_pwd_page():
     if g.POST.get('user_name') and g.POST.get('current_pwd')  and g.POST.GET('new_pwd') and g.POST.get('confirm'):
@@ -197,7 +210,7 @@ def load_credentials(puser='', pwd='', p_con=None):
     else:
         return False
 
-    q_str ="""select distinct  sa_app_name || '.' || sa_app_function,
+    q_str ="""select distinct  sa_app_name || '.' || sa_app_function as sa_pyapp,
                     sa_allowed 
                 from (
                         select sa_app_name, sa_app_function, 
@@ -222,7 +235,7 @@ def load_credentials(puser='', pwd='', p_con=None):
     _cur.execute(q_str,{'user_id':_r['user_id']})
     _r = _cur.fetchall()   
     if len(_r) > 0:
-        g.SEC = _r
+        g.SEC.update('USER_ACCESS') = _r
         return True
     return False
 
