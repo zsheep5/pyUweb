@@ -47,7 +47,7 @@
 		<a class="mobile-btn" href="#" title="Hide navigation">Hide Menu</a>
 	   	<div class="row">    		            
 			   	<ul id="nav" class="nav">
-						<li><a href="blog">Home</a></li>
+						<li><a href="view">Home</a></li>
 							<TMPL_IF name="SEC.USER_LOGGEDIN" value="True">
 								<li class="has-children"><a href="#">User Tools</a>
 									<ul>
@@ -65,8 +65,12 @@
 	                     <li><a href="blog.html">Blog Entries</a></li>
 	                     <li><a href="single.html">Single Blog</a></li>	                     
 	                  </ul>
-			      	</li>		      	
-			      	<li><a href="log_in">Login</a></li>
+					  </li>	
+					<TMPL_IF name="SEC.USER_LOGGEDIN" value="True"> 
+							<li><a href="log_out">Log out "<TMPL_VAR name="SEC.DISPLAY_NAME">" </a></li>
+					<TMPL_ELSE>
+						  <li><a href="log_in">Login</a></li>
+					</TMPL_IF>
 			   	</ul> <!-- end #nav -->			   	 
 	   	</div> 
 	</nav> <!-- end #nav-wrap -->  	     

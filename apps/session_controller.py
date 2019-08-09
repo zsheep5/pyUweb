@@ -199,8 +199,10 @@ def load_credentials(puser='', pwd='', p_con=None):
             """
     _cur.execute(q_str, {'pwd':pwd, 'puser':puser})
     _rec = _cur.fetchall()
+    user_id = 0
     if len(_rec) == 1:  ##if there is more than one record this a big problem with the database  
-        _r=_rec[0]
+        _r =_rec[0]
+        user_id = _r.get('user_id')
         g.SEC.update({'USER_ID':_r['user_id']})
         g.SEC.update({'USER_NAME':_r['user_name']+ ' ' +_r['user_last']})
         g.SEC.update({'USER_EMAIL':_r['user_email']})
@@ -210,32 +212,36 @@ def load_credentials(puser='', pwd='', p_con=None):
     else:
         return False
 
-    q_str ="""select distinct  sa_app_name || '.' || sa_app_function as sa_pyapp,
-                    sa_allowed 
+    q_str ="""select json_agg(
+                        json_build_object( 
+                            sa_app_name || '.' || sa_app_function ,
+                            sa_allowed 
+                        )
+                    ) as security
                 from (
                         select sa_app_name, sa_app_function, 
-                            sa_allowed
+                            sa_allowed, 'from_users'
                         from users
-                        left join sec_access on 
+                        inner join sec_access on 
                             sa_target_id = user_id
                             and sa_target_type = 'user'
                             and sa_allowed=true
                         where user_id = %(user_id)s
                     union 
                     select sa_app_name, sa_app_function, 
-                            sa_allowed
+                            sa_allowed, 'from_groups'
                         from sec_groups
-                        left join sec_access on
+                        inner join sec_access on
                             sa_target_id = sg_id
                             and sa_target_type = 'group'
                             and sa_allowed=true
                         where %(user_id)s =all(sg_members) 
                     ) sa """
 
-    _cur.execute(q_str,{'user_id':_r['user_id']})
-    _r = _cur.fetchall()   
-    if len(_r) > 0:
-        g.SEC.update('USER_ACCESS') = _r
+    _cur.execute(q_str, {'user_id':user_id })
+    _rec = _cur.fetchall()   
+    if len(_rec) ==1:
+        g.SEC.update({'USER_ACCESS':_rec[0]['security']})
         return True
     return False
 

@@ -546,7 +546,7 @@ def save_CSB(puser_id):
     _con = g.CONN.get('PG1')
     _cur = _con.cursor()
     g.CSB = uuid.uuid1().hex
-    _cur.execute(q_str,{'session_id':puser_id+ g.CSB})
+    _cur.execute(q_str,{'session_id':str(puser_id)+ g.CSB})
     _con.commit()
     return g.CSB
 
@@ -765,7 +765,10 @@ def create_access_list_from_py(p_pythonFile='', p_con=None):
                 }
             )
     return 
-    
+
+def add_to_security(p_id, p_sec_type, p_app_name, p_app_function, p_allowed=False ):
+    pass
+
 def create_access_list_from_app( p_app_stack={}, p_con=None):
     if p_app_stack == '' and p_con is None:
         return False
