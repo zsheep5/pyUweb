@@ -21,12 +21,15 @@ def execute():
 def view(): 
     _key = -1
     if 'blogkey' in g.GET:
-            _key = int(g.GET['blogkey'])
+            _key = int(g.GET.get('blogkey',-1))
     elif 'blogkey' in g.POST:
-           _key = int(g.Post['blogkey'])
+           _key = int(g.POST.get('blogkey',-1))
     if get_blog_by_id(_key):
+        if _key == -1 :
+            _blog = g.CONTEXT.get('blog', {})
+            _key = _blog.get('blog_id',-1)
         get_comments(_key)
-        get_blog_view_counts()
+        get_blog_counts(_key)
         get_cats()
         return True
     return False
@@ -49,21 +52,18 @@ def search_blog():
                 blog_tsv @@ query
             order by rank desc
                 """
-    con = g.CONN['PG1'] 
-    cur = con.cursor()
-    cur.execute(q_str, { 'search_value':_text } )
-    _rec = cur.fetchall()
+    _rec = m.run_sql_command(q_str, { 'search_value':_text })
     if len(_rec) > 0:
         _cat = []
         for _r in _rec:
             _cat.append({'blog_url': 
                         build_get_url('view',
-                                {'blogkey':_r[0]}
+                                {'blogkey':_r.get('blog_id')}
                             ),
-                        'blog_title':_r[1],
-                        'blog_date': _r[2],
-                        'blog_text_250':html2text(_r[3])[0:250],
-                        'rank':_r[4]
+                        'blog_title':_r.get('blog_title',''),
+                        'blog_date': _r.get('blog_date',''),
+                        'blog_text_250':html2text(_r.get('blog_htmltext','')[0:250]),
+                        'rank':_r.get('rank','0')
                     }
                 )
         g.CONTEXT.update({'search_results':_rec[0]})
@@ -71,26 +71,20 @@ def search_blog():
 
     return False
 
-def get_blog_by_id(pid = -1):  ##should always return  record set in the form list of list 
+def get_blog_by_id(pid=-1):  ##should always return  record set in the form list of list 
     q_str = """select blog_id, blog_user_id,  blog_title, blog_date, 
-                blog_htmltext, search_tags 
+                blog_htmltext, array_to_string(search_tags, '<br>') as search_tags 
         from blog  """
     if pid < 0: 
         q_str += """ order by blog_date desc """
     else :
         q_str += """ where blog_id = %(blogid)s""" 
-    con = g.CONN['PG1'] 
-    cur = con.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute(q_str, { 'blogid':pid } )
-    _rec = cur.fetchall()
+    _rec  = m.run_sql_command(q_str, { 'blogid':pid } )
     if len(_rec) > 0:
         g.CONTEXT.update({'blog':_rec[0]})
         return True
 
     return False
-
-def insert(named_list= []): ##returns the records inserted send in the list 
-    return None
 
 def delete(ids=[]): ##past a list of the primary IDs to delete.
     return True
@@ -101,25 +95,46 @@ def get_blogs_list(search_by, offset=0, limit=25):
 def build_pager():
     pass
 
-def get_more_results(p_id = -1, p_offset=0, p_limit=50):
+def get_more_results(p_id=-1, p_offset=0, p_limit=50):
     pass 
 
-def get_comments(p_id =-1, p_offset=0, p_limit=50):
-    q_str = """ select bc_id , bc_blog_id , bc_bc_parent,
-	            bc_user_id,	bc_date_id, bc_comment, bc_tvs
-                from  blog_comments where
+def get_comments(p_id=-1, p_offset=0, p_limit=50):
+    q_str = """ select bc_id , bc_blog_id , bc_parent_bc_id, bc_user_id,
+	            bc_date, bc_comment, bc_title, user_displayname, user_avatar,
+                (select count(bc_parent_bc_id) from blog_comments dd where dd.bc_id = bc_id) as bc_child_count 
+                from  blog_comments, users where
                 bc_blog_id  = %(blogid)s 
+                and bc_user_id = user_id 
                 limit %(p_limit)s  offset %(p_offset)s 
                 """
     con = g.CONN['PG1'] 
     cur = con.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(q_str, { 'blogid':p_id, 'p_limit': p_limit, 'p_offset': p_offset } )
-    _rec= cur.fetchall()
+    _rec = cur.fetchall()
     if len(_rec) > 0:
         g.CONTEXT.update({'comments':_rec})
         return True
     return False
 
+def get_child_comments():
+    if 'bc_id' in g.GET and 'limit' in g.GET and 'offset' in g.GET:
+
+        q_str = """ select bc_id , bc_blog_id , bc_parent_bc_id,
+                    bc_user_id,	bc_date, bc_comment, bc_title,
+                    (select count(bc_parent_bc_id) from blog_comments dd where dd.bc_id = bc_id) as bc_child_count 
+                    from  blog_comments where
+                    bc_id  = %(bc_id)s 
+                    limit %(limit)s  offset %(offset)s """
+        con = g.CONN['PG1'] 
+        cur = con.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(q_str, { 'bc_id':g.GET.get(bc_id, 0), 
+                            'p_limit': g.GET.get('limit', 0), 
+                            'p_offset': p_offset.get('offset',50) } )
+        _rec = cur.fetchall()
+        if len(_rec) > 0:   
+            g.CONTEXT.update({'child_comments':_rec})
+            return True
+    return False
 
 def add_comment(p_id=-1, p_user_id=-1, p_text='', p_bc_parent=None,):
     q_str = """ insert into blog_comments values ( default, %(blog_id),
@@ -132,25 +147,79 @@ def add_comment(p_id=-1, p_user_id=-1, p_text='', p_bc_parent=None,):
     cur.execute(q_str, _topass)
 
 def edit_blog():
-    _key = -1
-    if not m.check_credentials('blog.edit_blog', g.SEC['USER_ID'], ):
+
+    if not m.check_credentials('blog.edit_blog', g.SEC.get('USER_ID',-1) ):
         return m.log_in_page()
 
-    if 'blogkey' in g.GET:
-            _key = int(g.GET['blogkey'])
-    elif 'blogkey' in g.POST:
-           _key = int(g.Post['blogkey'])
-    
+    if 'blog_id' in g.GET:
+            _key = int(g.GET['blog_id'])
+    elif 'blog_id' in g.POST:
+           _key = int(g.Post['blog_id'])
+
     if _key == -1:
-        _key = m.get_db_next_id('blog_blog_id_seq')
-        if _key == -1:
-            return False
-        g.CONTEXT.update({'mode':'new',
-                        'blogkey':_key, 
-                        }
-                        )
-    else :
-        _missing = m.test_for_entries_in(['title', 'html_text', 
+        return False
+
+    _sql = "select blog_title, blog_htmltext from blog where blog_id = %(blog_id)s;"
+
+    _rec = m.run_sql_command(_sql, {'blog_id':_key})
+    if len(_rec) == 0 :
+        return False
+    g.CONTEXT.update({'submit_command':'save_blog',
+                      'blog_id':_key, 
+                      'title': _rec.get('blog_title',''),
+                      'content':_rec.get('blog_html','')
+                    })
+    return True 
+
+def new_blog():
+    g.CONTEXT.update({'blog_id' : m.get_db_next_id("blog_blog_id_seq"),
+                    'submit_command': 'save_blog'}
+                    )
+    return True
+
+def save_blog():
+    if 'blog_id' in g.GET :
+        _key = int(''.join(g.GET.get('blog_id')),'-1')
+        _search_tags = ''.join(g.GET.get('search_tags', '')).split(',')
+        _text = ''.join(g.GET.get('content', ''))
+        _title = ''.join(g.GET.get('title', ''))
+    elif 'blog_id' in g.POST:
+        _key = int(''.join(g.POST.get('blog_id','-1')))
+        _search_tags = ''.join(g.POST.get('search_tags', '')).split(',')
+        _text = ''.join(g.POST.get('content', ''))
+        _title = ''.join(g.POST.get('title', ''))
+    else  :
+        return False
+    
+    _sql = """ insert into blog values (
+            %(blog_id)s ,
+            %(blog_user_id)s ,
+            now(),
+            %(blog_htmltext)s ,
+            %(search_tags)s ,
+            to_tsvector(%(tvs)s),
+            %(blog_title)s )
+        on Conflict ( blog_id ) do Update set  
+            blog_htmltext =   %(blog_htmltext)s ,
+            search_tags = %(search_tags)s ,
+            tvs = to_tsvector(%(tvs)s),
+            blog_title =%(blog_title)s
+        where  blog_id = %(blog_id)s
+    );"""
+
+    _topadd = { 'blog_id': _key,
+            'blog_user_id':int(g.SEC.get('USER_ID',-1)),
+            'blog_htmltext': _text,
+            'search_tags': _search_tags,
+            'tvs':extext(_text),
+            'blog_title': _title
+
+    }
+    m.run_sql_command(_sql, _topadd)
+    return get_blog_by_id(_key)
+
+"""
+ _missing = m.test_for_entries_in(['title', 'comment', 
                                 'tags', 'author', 
                                 'date_posted',
                                 'category',],
@@ -161,26 +230,7 @@ def edit_blog():
                 % (', '.join(_missing), 'edit_blog') 
             )
             return False
-        add_blog(
-            p_user = ''
-        )
-        
-    return False
-
-def new_blog():
-    g.CONTEXT.update({'blog_id' : m.get_db_next_id("blog_blog_id_seq"),
-                    'submit_command': 'save_blog'}
-                    )
-    return True
-
-def save_blog():
-    if 'blog_id' in g.GET and 'blog_text' in g.GET and 'blog_title' in g.GET:
-            _key = int(g.GET['blogkey'])
-            _text = g.GET.get('blog_text')
-    elif 'blog_id' in g.POST:
-           _key = int(g.Post['blogkey'])
-    else:
-        m.error('No ID key found get or post dictionaries', 'blog.save_blog')
+"""
 
 def commit_blog(p_user =-1 , pblog_id =-1, p_htmltext='', p_tags='', p_title='',  ):
     q_str =  """ insert into values
@@ -203,7 +253,6 @@ def commit_blog(p_user =-1 , pblog_id =-1, p_htmltext='', p_tags='', p_title='',
         return _rec[0][0]
     return -1
 
-
 def get_cats():
     q_str= """ select  '?id=' || cat_id::text as url, cat_short as Name, 
                 cat_long || ' ' ||  coalesce(bl_count, 0)::text as LinkText
@@ -224,7 +273,17 @@ def get_cats():
 def view_category():
     pass
 
-def get_blog_view_counts():
+def get_blog_counts(p_id):
+    q_str = """ select bc_views 
+                from blog_counter where bc_blog_id = %(id)s  """
+    con = g.CONN['PG1'] 
+    cur = con.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(q_str, {'id': p_id})
+    _rec = cur.fetchall()
+    g.CONTEXT.update({'web_urls':  m.build_url_links(_rec)}) 
+    return True 
+
+def get_blog_view_counts(p_id):
     q_str = """ select blog_title as Name, 
                         blog_title || coalesce(bc_views, 0)::text as LinkText,
                         '?id='||blog_id::text as url
@@ -235,7 +294,8 @@ def get_blog_view_counts():
     cur = con.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(q_str)
     _rec = cur.fetchall()
-    g.CONTEXT.update({'web_urls':  m.build_url_links(_rec)})  
+    g.CONTEXT.update({'web_urls':  m.build_url_links(_rec)}) 
+    return True 
 
 def up_blog_view_count(p_id=-1):
     if p_id < 0:
@@ -251,15 +311,8 @@ def up_blog_view_count(p_id=-1):
     cur.execute(q_str, _topass)
     return True
 
-
 def update_blog():
     pass
 
 def delete_comment():
     pass
-
-def POST(_post):
-    return True 
-
-def GET(_get):
-    return True

@@ -1,3 +1,55 @@
-<pre>
-<TMPL_VAR name="Dump"></TMPL_VAR>
-</pre>
+<table style="width:100%">
+<tr> <td>Application Information: 
+        <tr><td> Application URL: <TMPL_VAR name="APPURL"> </td> </tr> 
+        <tr><td> Content Type: <TMPL_VAR name="HEADERS.Content-Type"> </td> </tr>
+        <tr><td> Character Encoding: <TMPL_VAR name="HEADERS.charset"> </td> </tr>
+        <tr><td>Site Name<TMPL_VAR name="SITE_NAME"> </td></tr> 
+        
+        <tr><td> Cross Script key <TMPL_VAR name="CSB"> </td> </tr>
+    </td>
+</tr>
+<tr>    
+   <td>Call Stack </td>
+   <td> <TMPL_VAR name="Call Stack"> </td> 
+</tr>
+<tr>
+    <td>document settings 
+        <tr><td> <TMPL_VAR name="DOCS.filepath"> </td></tr>
+        <tr><td> <TMPL_VAR name="DOCS.furlpath"> </td></tr>
+        <tr><td> <TMPL_VAR name="DOCS.urlpath"> </td></tr>
+    </td>
+</tr>
+<tr> 
+    <td> Image Settings       
+        <td>server path: <TMPL_VAR name="IMAGES.filepath"> </td> 
+        <td>full url path: <TMPL_VAR name="IMAGES.furlpath"> </td> 
+        <td>short url path: <TMPL_VAR name="IMAGES.urlpath"> </td> 
+    </td>
+    <td> Media File Settings 
+        <tr><td>server path: <TMPL_VAR name="MEDIA.filepath"> </td> </tr>
+        <tr><td>full url path: <TMPL_VAR name="MEDIA.furlpath"> </td> </tr>
+        <tr><td>short url path: <TMPL_VAR name="MEDIA.urlpath"> </td></tr>
+    </td>
+    <td> Static File Settings 
+        <tr><td>server path: <TMPL_VAR name="STATIC.filepath"> </td></tr> 
+        <tr><td>full url path: <TMPL_VAR name="STATIC.furlpath"> </td></tr> 
+        <tr><td>short url path: <TMPL_VAR name="STATIC.urlpath"> </td></tr> 
+</tr> 
+<tr> Security and User Access 
+    <tr> <td> Security Required<TMPL_VAR name="SEC.REQUIRE_LOGGIN"> </td> </tr>
+    <TMPL_LOOP name="USER_ACCESS"> 
+    </TMPL_LOOP>  
+    <tr><td>AutoLogin <TMPL_VAR name="SEC.USER_AUTOLOGIN"> </td> </tr>
+    <tr><td>Client <TMPL_VAR name="SEC.USER_CLIENT"> </td></tr> 
+    <tr><td>Email <TMPL_VAR name="SEC.USER_EMAIL"> </td></tr> 
+    <TMPL_LOOP name="USER_GROUP"> 
+    </TMPL_LOOP>  
+    <tr><td>ID Key <TMPL_VAR name="SEC.USER_ID"> </td></tr> 
+    <tr><td>IP Address <TMPL_VAR name="SEC.USER_IPADDRESS"> </td></tr> 
+    <tr><td>Is Logged in<TMPL_VAR name="SEC.USER_LOGGEDIN"> </td></tr> 
+    <tr><td>Name<TMPL_VAR name="SEC.USER_NAME"> </td></tr> 
+    <tr><td>PWD <TMPL_VAR name="SEC.USER_PWD"> </td></tr> 
+    <tr><td>Timeout <TMPL_VAR name="SEC.USER_TIMER"> </td></tr> 
+    
+</tr>
+</table>

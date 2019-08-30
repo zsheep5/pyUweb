@@ -1,151 +1,139 @@
 <h3> Comments</h3>
 
 <!-- commentlist -->
-<ol class="commentlist">
-
-    <li class="depth-1">
-
-        <div class="avatar">
-        <img width="50" height="50" class="avatar" src="<TMPL_VAR name="IMAGES.furlpath">/user-01.png" alt="">
-        </div>
-
-        <div class="comment-content">
-
-            <div class="comment-info">
-            <cite>interesting</cite>
-
-            <div class="comment-meta">
-                <time class="comment-time" datetime="2014-07-12T23:05">Jul 12, 2014 @ 23:05</time>
-                <span class="sep">/</span><a class="reply" href="#">Reply</a>
-            </div>
-            </div>
-
-            <div class="comment-text">
-            <p>comments</p>
-            </div>
-
-        </div>
-
-    </li>
-
-    <li class="thread-alt depth-1">
-
-        <div class="avatar">
-        <img width="50" height="50" class="avatar" src="<TMPL_VAR name="IMAGES.furlpath">/user-03.png" alt="">
-        </div>
-
-        <div class="comment-content">
-
-            <div class="comment-info">
-            <cite>Name</cite>
-
-            <div class="comment-meta">
-                <time class="comment-time" datetime="2014-07-12T24:05">Jul 12, 2014 @ 24:05</time>
-                <span class="sep">/</span><a class="reply" href="#">Reply</a>
-            </div>
-            </div>
-
-            <div class="comment-text">
-            <p>comments</p>                        
-            </div>
-
-        </div>
-
-        <ul class="children">
-
-        <li class="depth-2">
+<TMPL_IF name="comments"> <!--test to see if there are comments to show -->
+    
+    <ol class="commentlist">
+        <TMPL_LOOP name="comments">
+            <li class="depth-1">
+                <div class="avatar">
+                <img width="50" height="50" class="avatar" src="<TMPL_VAR name="IMAGES.furlpath">/user-01.png" alt="">
+                </div>
+                <div class="comment-content">
+                    <div class="comment-info">
+                        <cite><TMPL_var name="bc_title"></cite>
+                    </div>
+                    <div class="comment-text"> 
+                        <p><TMPL_var name="bc_comment"> </p>
+                        <div class="comment-meta">
+                                <time class="comment-time" datetime="<TMPL_var name="bc_date"> "><TMPL_var name="bc_date">  </time>
+                                <span class="sep">/</span><a class="reply" href="#">Reply</a>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        </TMPL_LOOP>
+        <!--
+        <li class="thread-alt depth-1">
 
             <div class="avatar">
-                <img width="50" height="50" class="avatar" src="<TMPL_VAR name="IMAGES.furlpath">/user-03.png" alt="">
+            <img width="50" height="50" class="avatar" src="<TMPL_VAR name="IMAGES.furlpath">/user-03.png" alt="">
             </div>
 
             <div class="comment-content">
 
                 <div class="comment-info">
-                    <cite>john doe</cite>
+                <cite>Name</cite>
 
-                    <div class="comment-meta">
-                        <time class="comment-time" datetime="2014-07-12T25:05">Jul 12, 2014 @ 25:05</time>
-                        <span class="sep">/</span><a class="reply" href="#">Reply</a>
-                    </div>
+                <div class="comment-meta">
+                    <time class="comment-time" datetime="2014-07-12T24:05">Jul 12, 2014 @ 24:05</time>
+                    <span class="sep">/</span><a class="reply" href="#">Reply</a>
+                </div>
                 </div>
 
                 <div class="comment-text">
-                    <p></p>
+                <p>comments</p>                        
                 </div>
 
             </div>
 
             <ul class="children">
 
-                <li class="depth-3">
+            <li class="depth-2">
 
-                    <div class="avatar">
+                <div class="avatar">
                     <img width="50" height="50" class="avatar" src="<TMPL_VAR name="IMAGES.furlpath">/user-03.png" alt="">
-                    </div>
+                </div>
 
-                    <div class="comment-content">
+                <div class="comment-content">
 
-                        <div class="comment-info">
-                        <cite>John Doe</cite>
+                    <div class="comment-info">
+                        <cite>john doe</cite>
 
                         <div class="comment-meta">
-                            <time class="comment-time" datetime="2014-07-12T25:15">July 12, 2014 @ 25:15</time>
+                            <time class="comment-time" datetime="2014-07-12T25:05">Jul 12, 2014 @ 25:05</time>
                             <span class="sep">/</span><a class="reply" href="#">Reply</a>
                         </div>
-                        </div>
-
-                        <div class="comment-text">
-                        <p>comments</p>
-                        </div>
-
                     </div>
 
-                </li>
+                    <div class="comment-text">
+                        <p></p>
+                    </div>
+
+                </div>
+
+                <ul class="children">
+
+                    <li class="depth-3">
+
+                        <div class="avatar">
+                        <img width="50" height="50" class="avatar" src="<TMPL_VAR name="IMAGES.furlpath">/user-03.png" alt="">
+                        </div>
+
+                        <div class="comment-content">
+
+                            <div class="comment-info">
+                            <cite>John Doe</cite>
+
+                            <div class="comment-meta">
+                                <time class="comment-time" datetime="2014-07-12T25:15">July 12, 2014 @ 25:15</time>
+                                <span class="sep">/</span><a class="reply" href="#">Reply</a>
+                            </div>
+                            </div>
+
+                            <div class="comment-text">
+                            <p>comments</p>
+                            </div>
+
+                        </div>
+
+                    </li>
+
+                </ul>
+
+            </li>
 
             </ul>
 
         </li>
-
-        </ul>
-
-    </li>
-
-</ol> <!-- Commentlist End -->
-
+    -->
+    </ol> <!-- Commentlist End -->
+</TMPL_IF>
 
 <!-- respond -->
 <div class="respond">
-
     <h3>Leave a Comment</h3>
-
     <!-- form -->
     <form name="contactForm" id="contactForm" method="post" action="">
+        <input name="blod_id" type="hidden" id="blog_id" value="<TMPL_var name="bl_id">" />
         <fieldset>
-
-        <div class="group">
+            <div class="group">
                 <label for="cName">Name <span class="required">*</span></label>
                 <input name="cName" type="text" id="cName" size="35" value="" />
-        </div>
+            </div>
 
-        <div class="group">
+            <div class="group">
                 <label for="cEmail">Email <span class="required">*</span></label>
                 <input name="cEmail" type="text" id="cEmail" size="35" value="" />
-        </div>
+            </div>
 
-        <div class="group">
-                <label for="cWebsite">Website</label>
-                <input name="cWebsite" type="text" id="cWebsite" size="35" value="" />
-        </div>
-
-        <div class="message group">
-        <label  for="cMessage">Message <span class="required">*</span></label>
-        <textarea name="cMessage"  id="cMessage" rows="10" cols="50" ></textarea>
-        </div>
-
-        <button type="submit" class="submit">Submit</button>
-
+            <div class="message group">
+                <label  for="title">Title <span class="required">*</span></label>
+                <input type="text" name="title" id="tile" > <br>
+                <label  for="comment">Message <span class="required">*</span></label>
+                <textarea name="comment"  id="comment" rows="10" cols="50" ></textarea>
+            </div>
+            <button type="submit" class="submit">Submit</button>
         </fieldset>
-        </form> <!-- Form End -->
-
+    </form> <!-- Form End -->
 </div> <!-- Respond End -->

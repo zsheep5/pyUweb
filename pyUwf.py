@@ -1,4 +1,4 @@
-import psycopg2, psycopg2.extras
+import psycopg2, psycopg2.extras, psycopg2.errors
 import cgi, os, importlib, time
 import pyctemplate   #template engine
 from urllib.parse import quote_plus, urlparse, urlencode, parse_qs
@@ -15,49 +15,69 @@ import apps.session_controller as session
 # if all are true it then searches for the app to be called then processes it
 #      
 def kick_start(enviro, start_response):
-    if not check_paths():
-        return server_respond(pstatus='500 ', 
-            poutput='paths declared in globals.py failsed', pre=None,
-            sr=start_response)
-    else:
-        append_to_sys_path()
-    if not connect_to_db(pwd='123456'):
-        return server_respond(pstatus='500 ', 
-            poutput='Can not connect to the Database', pre=None,
-            sr=start_response)
-    elif not load_enviro(enviro):
-        error('Load Enviroment return false, can not continue ')
-        return server_respond(pstatus='500 ', 
-            poutput='load enviro error', pre=None, sr=start_response)
-    elif not check_SSL(enviro):
-        return server_respond(pstatus='500 ', 
-            poutput='SSL Check failure', pre=None, sr=start_response)
-    elif not match_uri_to_app():
-        ## failed to match to an app lets see if this request is an file that we can serve out
-        if g.SERVE_STATIC_FILES : 
-            if get_static_url_file(g.GET.get('url_path')):
-                return server_respondf(pstatus='200 ', 
-                        pheaders=g.HEADERS,
-                        poutput= g.OUTPUT,
-                        sr=start_response
-                        )
-        return server_respond(pstatus='500 ', 
-            poutput='URI did not match to anything on this server', pre=None,
-            sr=start_response)
-    else:
-        _ap=  g.ENVIRO['PYAPP_TO_RUN']
-        _test = run_pyapp( 
-                papp_filename= _ap['filename'],
-                papp_path=     _ap['path'],
-                papp_command=   _ap['command'],
-                ptemplate_stack=_ap['template_stack'],
-                pcontent_type=  _ap['content_type']
-            )
-        if _test:
-            return server_respond(poutput=g.OUTPUT,
-                pre=None,
+    try :
+        clear_globals()
+        if not check_paths():
+            return server_respond(pstatus='500 ', 
+                poutput='paths declared in globals.py failsed', pre=None,
                 sr=start_response)
-    
+        else:
+            append_to_sys_path()
+        if not connect_to_db(pwd='123456'):
+            return server_respond(pstatus='500 ', 
+                poutput='Can not connect to the Database', pre=None,
+                sr=start_response)
+        elif not load_enviro(enviro):
+            error('Load Enviroment return false, can not continue ')
+            return server_respond(pstatus='500 ', 
+                poutput='load enviro error', pre=None, sr=start_response)
+        elif not check_SSL(enviro):
+            return server_respond(pstatus='500 ', 
+                poutput='SSL Check failure', pre=None, sr=start_response)
+        elif g.ENVIRO['PYAPP_TO_RUN'] is None:
+            ## load enviroment should have put app to run here if it is none match failed so must be returning a static file 
+            if g.SERVE_STATIC_FILES : 
+                if get_static_url_file(g.GET.get('url_path','')):
+                    set_static_file_cache_header()
+                    return server_respondf(pstatus='200 ', 
+                            pheaders=g.HEADERS,
+                            poutput= g.OUTPUT,
+                            sr=start_response
+                            )
+            return server_respond(pstatus='500 ', 
+                poutput='URI did not match to anything on this server', pre=None,
+                sr=start_response)
+        else:
+            _ap=  g.ENVIRO['PYAPP_TO_RUN']
+            _test = run_pyapp( 
+                    papp_filename= _ap.get('filename',None),
+                    papp_path=     _ap.get('path', None),
+                    papp_command=   _ap.get('command',None),
+                    ptemplate_stack=_ap.get('template_stack',None),
+                    pcontent_type=  _ap.get('content_type',None),
+                    pserver_cache_on = _ap.get('server_cache_on',False),
+                    pserver_cache_age = _ap.get('server_cache_age',0),
+                    pcacheability = _ap.get('cacheability', 'no-sotre'),
+                    pcache_age = _ap.get('cache_age',0)
+                )
+            if _test:
+                return server_respond(poutput=g.OUTPUT,
+                    pre=None,
+                    sr=start_response)
+            else:
+                run_pyapp()
+    except Exception e:
+        #catch any exception if the error template is setup return result to the client if not rethrow exception
+        _ea = g.APPSTACK.get("error")
+        _et = g.TEMPLATE_STACK.get(_ea.get('template_stack'))
+        if _ea and _et : 
+            _output = error_catcher(_ea, _et, e )
+            return server_respond(pstatus='500',
+                pheaders={'Content-type': 'text/plain'}
+                poutput=_output,
+                sr=start_response)
+        else: 
+            raise e
     return server_respond(pstatus='500 ',
         pcontext=[],
         pheaders={'Content-type': 'text/plain'},
@@ -66,18 +86,50 @@ def kick_start(enviro, start_response):
         sr=start_response
         )
 
-def get_static_url_file(p_full_path=''):
-    _filepath = convert_url_path_server_path(p_full_path)
-    if os.path.isfile(_filepath):
+def error_catcher(p_AS={}, p_TS=[]):
+    """
+    p_AS is the app stack entry 
+    Error Catcher is the function called to redirect sys.stderr so it can be formated and sent back client interface
+    it recieves an app stack to find the py  file looks for the command entry and template to use to.
+    it links the command entry to the sys.stderror
+    """
+    _com = p_AS.get('command', '')
+    _et = ''
+    if build_template('error', p_TS, False, False):
+        _et = template_cache_get('error'+g.TEMPALATE_EXTENSION)
+    else:
+        raise Exception('The error handler could not build it template')
+    _er = importlib.import_module(p_AS.get('filename', ''), _com)
+    if hasattr(_er, _com) : 
+        sys.stdout = getattr(_er, _com)
+        sys.stderr = getattr(_er, _com)
+    else:
+        raise Exception('The error handler is not setup correctly in the app stak or is missing ')
+
+def get_static_url_file(pfull_path='', pcheck_file_only =False):
+    _filepath = convert_url_path_server_path(pfull_path)
+    _found =  os.path.isfile(_filepath)
+    if _found and pcheck_file_only ==False:
         _fp = open(_filepath, 'rb')
         g.OUTPUT = _fp.read()
         _fp.close()
-        _type, _encode = mt.guess_type(_filepath)
+        _type, _encode = mt.guess_type(_filepath, strict=False)
+        if _type is None :
+            _type = 'plain/text'
         g.HEADERS = {'Content-type': _type}
-        return True
-    return False
+    return _found
+
+def set_static_file_cache_header(pcacheability='public', pmethod='max-age', p_age=0 ):
+    if p_age ==0 and pmethod in ('max-age', 's-maxage', 'stale-while-revalidate', 'stale-if-error' ):
+        p_age = g.ENVIRO.get('STATIC_FILES_CACHE_AGE', 600)
+        g.HEADERS.update({'Cache-Control': pcacheability + ' ' + pmethod + '=' + str(p_age) } )
+    else:
+        g.HEADERS.update({'Cache-Control': pcacheability })
 
 def convert_url_path_server_path(p_upath=''):
+    
+    if len(p_upath)==0:
+        return ''
     if p_upath[0:1] in ('/', "\\" ):
         p_upath = p_upath[1:]
     _url_path = p_upath.split('/')
@@ -104,7 +156,7 @@ def server_respond(pstatus=g.STATUS,
         pcontext=g.CONTEXT,
         pheaders=g.HEADERS,
         penviro=g.ENVIRO,
-        pcookies=g.COOKIES,
+        pcookies=g.COOKES_to_Send,
         pre=None,
         poutput='',
         sr=None):
@@ -113,23 +165,12 @@ def server_respond(pstatus=g.STATUS,
     if g.HTTP_REDIRECT is not None:  ## something has set the global Redirect varaible clear output
         client_redirect(url=g.HTTP_REIRECT)  ## this was most likely already called eariler but we will call it again to make sure the headers are set
         poutput = '' #
-    elif g.ERRORSSHOW or (pstatus != '200' and g.ERRORSSHOW):
-        build_template('error', g.TEMPLATE_STACK.get('error'), False)
-        error_context = {'Dump':dump_globals()}
-        _ef = g.ENVIRO['TEMPLATE_CACHE_PATH'] + 'error' + g.TEMPALATE_EXTENSION
-
-        _errorout = g.TEMPLATE_ENGINE(_ef,
-                error_context,
-                g.ENVIRO.get('TEMPLATE_TYPE'), 
-                g.ENVIRO.get('TEMPLATE_TMP_PATH')
-            )
-        poutput = poutput.replace('</body>', _errorout + '</body>', 1)
-
-
+        
     _head = list(pheaders.items()) # wsgi wants this as list 
-    cc =[('Set-Cookie', str(v).strip() +";" ) for k, v in pcookies.items()] #put in the cookies 
-    aa =[('Set-Cookie', g.COOKIES.output(attrs=None, header='', sep=''))]
-    _head.extend( aa)
+    if len(g.COOKES_to_Send) > 0 :
+        cc =[('Set-Cookie', str(v).strip() +";" ) for k, v in pcookies.items()] #put in the cookies 
+        aa =[('Set-Cookie', g.COOKES_to_Send.output(attrs=None, header='', sep=''))]
+        _head.extend( aa)
     _outputB = poutput.encode(encoding='utf-8', errors='replace')
 
     ##add the content length just before returning wsgi module
@@ -143,83 +184,42 @@ def server_respondf(pstatus=g.STATUS,
         poutput=None,
         sr = None):
     _head = list(pheaders.items()) # wsgi wants this as list 
-    
+    if len(poutput) == 0 :
+        poutput ==b'failed to find the file'
+        pass
     ##add the content length just before returning wsgi module
-    _head.append( ('Content-Length', str(len(poutput))))
+    for k, v in _head:
+        if not isinstance(k, str):
+            bb = 'problem'
+        if not isinstance(v, str):
+            bb = 'problem'
+    if _head is None :
+        _head =  ('Content-Length', str(len(poutput)))
+    else:
+        _head.append(('Content-Length', str(len(poutput))))
     sr(pstatus, _head)
     return [poutput]
 
-def dump_globals():
-    output = 'WebServer_ENVIRO \r\n'
-    for key, value in sorted(g.APACHE_ENVIRO.items()):
-        if value is not None:
-            output += "%s %s \r\n " %(key,value)
-    
-    output += "\r\nAltered HTTP HEADERS \r\n "
-    for key, value in sorted(g.HEADERS.items()):
-        if value is not None:
-            output += "%s %s \r\n " %(key,value)
-    
-    output += "\r\nCookies  \r\n "
-    if len(g.COOKIES):
-        for k, v in sorted(g.COOKIES.items()):
-            output += 'Cookie Key = %s  value= %s' %(k, v)
-
-    output += "\r\n \r\n APPLICATION ENVIROMENT \r\n"
-    for key, value in  sorted(g.ENVIRO.items()):
-        if value is not None:
-            output += "%s:%s \r\n " %(key,value)
-
-    if len(g.POST) > 0:
-        output += "\r\n Converted POST commands\r\n" 
-        for key, value in sorted(g.POST.items()):
-            if value is not None:
-                output += "%s:%s \r\n" %(key,value)
-
-    if len(g.GET) > 0:
-        output += "\r\n Converted GET commands\r\n" 
-        for key, value in sorted(g.GET.items()):
-            if value is not None :
-                output += "%s:%s \r\n" %(key,value)
-
-    if len(g.CONTEXT) > 0:
-        output += "\r\n context\r\n" 
-        for key, value in sorted(g.CONTEXT.items()):
-            if value is not None and type(value) not in (list, dict, tuple) :
-                output += "%s:%s \r\n" %(key,value)
-    
-    if len(g.COOKIES) > 0:
-        output += "\r\n Cookies\r\n" 
-        output += g.COOKIES.output(sep='\r\n')
-
-    if len(g.APPSTACK) > 0:
-        output += "\r\n Application Stack\r\n" 
-        for key, value in sorted(g.APPSTACK.items()):
-            if value is not None:
-                output += "%s:%s \r\n" %(key,value)
-
-    if len(g.TEMPLATE_STACK) > 0:
-        output += "\r\n Template Stack\r\n" 
-        for key, value in sorted(g.TEMPLATE_STACK.items()):
-            if value is not None:
-                output += "%s:%s \r\n" %(key,value)
-    
-    if len(g.ERRORSTACK):
-        output += "\r\n Error Stack:\r\n"
-        for _est in g.ERRORSTACK:
-            output += "\r\n".join(_est)
-
-    output += "\r\n Template to be Rendered: %s \r\n" % (g.TEMPLATE_TO_RENDER)
-    output += "Security Context is not dumped \r\n"
-
-    return output
+def clear_globals():
+    g.POST = {}
+    g.ERRORSTACK = []
+    g.GET = {}
+    g.HEADERS = {}
+    g.OUTPUT = ''
+    g.CONTEXT = {}
+    g.COOKIES = g.cookies.BaseCookie()
+    g.COOKES_to_Send = g.cookies.BaseCookie()
 
 def run_pyapp(papp_filename='', 
                 papp_path='.', 
                 papp_command='init', 
                 ptemplate_stack='',
                 pcontent_type='', 
-                pcheck_CSB = True):
+                pcheck_CSB = True,
+                pserver_cache_on=False,
+                pserver_cache_age = 0,
+                pcacheability = 'no-sotre',
+                pcache_age=0):
     """
     papp_filename: is the python module being dynamically imported 
     papp_path: is the path to the module it should follow python . notation
@@ -227,9 +227,13 @@ def run_pyapp(papp_filename='',
     ptemplate_stack: template stack that is rendered by the app
     pcontect_type: html content type retuned to the browes 
     pcheck_CSB: this stage check the CSB entry to the one in the server if it does not no other 
+    pserver_cache_on :=False is the server allowed to use local cache rendering of previous results
+    pserver_cache_age: = in seconds the 
+    pcacheability:  allow the client to cache the results 
+    pcache_age=0: if the client is allowed to cache how long is it good for 
     processing is done default is to check the CSB.
 
-    the function must to return a boolean type.  if this function is called recursively 
+    the function must return a boolean type.  if this function is called recursively 
     there is logic built in to redirect or call a different app to render a different result. 
     Method ONE is a recursive call must return False to prevent the Output buffer 
         from being re-rendered and just call run_pyapp setting the parameters as nessarcy 
@@ -239,13 +243,73 @@ def run_pyapp(papp_filename='',
 
     Keep in mind the CSB entry may have already checked and deleted from the database there may be a need
     to set the pcheck_CSB to false on recurvise run_pyapp to allow additional processing  
+
+    if server side cacheing is used this means one can not relie on CSB 
+
     """
     if papp_filename == '':
         error('No App_name passed in Failed', 'run_pyapp')
         return False
-    to_render =False
-    ## try to find the template on the template link in the dictionary
-    error( 'var pass = %s'% (ptemplate_stack), 'what value is passed into ptemplate_stacks')
+    ## lets see if the app is allowed to be cached if so do we have cached version to send to the client?
+    if pserver_cache_on and \
+        results_cache_is_in('post_render_'+papp_filename + "_" + papp_command + ".html", pserver_cache_age, True):
+        return True      
+    #lets check the CSB key in the saved session if valid continue with the 
+    #saved session from the database.  if not die 
+    if not check_CSB(g.CSB):
+        error('CSB has expired or is not present should redirect to root or login page the CSB created aknew')
+    
+    add_globals_to_Context()
+    _ar = importlib.import_module(papp_filename, papp_command) 
+    _result = False
+    _to_render = False
+    if hasattr(_ar, papp_command) : 
+        if not session.check_credentials(papp_command): #check secuirty
+            _result = session.load_login_page("This function %s requires you to be logged in "%(papp_command) )
+            _to_render = True 
+        else :
+            _to_render = match_template_to_app(ptemplate_stack, papp_command, papp_filename)
+            _result = getattr(_ar, papp_command)() #run the cammand being requested  
+        if _to_render and _result :
+            try :
+                g.CONTEXT.update({'CSB':save_CSB(g.SEC['USER_ID'])})
+                g.OUTPUT= g.TEMPLATE_ENGINE(g.TEMPLATE_TO_RENDER, 
+                            g.CONTEXT, 
+                            g.ENVIRO.get('TEMPLATE_TYPE'), 
+                            g.ENVIRO.get('TEMPLATE_TMP_PATH'))
+                if pserver_cache_on :
+                    result_cache_put_in('post_render_'+papp_filename + "_" + papp_command  + ".html", g.OUTPUT)
+
+                g.HEADERS['Content-Type']= pcontent_type
+                return True
+            except AttributeError as e :
+                error("""Failed to render Template %s 
+                        Render Engine Error %s
+                        typically the context structure is wrong %s""" %
+                        (g.TEMPLATE_TO_RENDER, 
+                        str(e),
+                        str(g.CONTEXT) 
+                        )
+                    )
+                return False
+        else:
+            error('Not Critical: ran the app but did not have template to process ')
+        return True
+    else:
+        error('Error could not find  %s command in %s '%(papp_command, papp_filename), '')    
+
+    return False
+
+def match_template_to_app(ptemplate_stack, papp_command, papp_filename):
+    """
+    Searches through the TemplateStack using the passed template name if that fails
+    it will then use the app_command then the name of the python file where app is stored  
+    ptemplate_stack :  name of the template stored in the globals.TEMPLATE_STACK
+    papp_command : command that is or will be process this is found in the globals.APPSTACK
+    papp_filename : name of the py file where the app_command is located.
+    """
+    ## try to find the template  in the global template_stack dictionary
+    #error( 'var pass = %s'% (ptemplate_stack), 'what value is passed into ptemplate_stacks')
     if ptemplate_stack in g.TEMPLATE_STACK:
         to_render = build_template( papp_command, 
                     g.TEMPLATE_STACK[ptemplate_stack])
@@ -266,48 +330,16 @@ def run_pyapp(papp_filename='',
         if not to_render:
             error("failed to render a template for %s" %(papp_filename), 'use file name')
     else:
+        to_render = False
         error("No Template Defined for %s " % ( papp_filename ), 'run_pyapp')
-    
-    #lets check the CSB key in the saved session if valid continue with the 
-    #saved session from the database.  if not die 
-    if not check_CSB(g.CSB):
-        error('CSB has expired or is not present should redirect to root or login page the CSB created aknew')
-    
-    add_globals_to_Context()
-    ar = importlib.import_module(papp_filename, papp_command) 
-    if hasattr(ar, papp_command) : 
-        if getattr(ar, papp_command)(): ##if the app returns false no template will be rendered
-                    # logic here is so the calledpyapp can recursive call run_pyapp
-                    # return false to block the rendering engine and clearing the output buffer.   
-            if to_render :
-                try :
-                    g.CONTEXT.update({'CSB':save_CSB(g.SEC['USER_ID'])})
-                    g.OUTPUT= g.TEMPLATE_ENGINE(g.TEMPLATE_TO_RENDER, 
-                                g.CONTEXT, 
-                                g.ENVIRO.get('TEMPLATE_TYPE'), 
-                                g.ENVIRO.get('TEMPLATE_TMP_PATH'))
-                    g.HEADERS['Content-Type']= pcontent_type
-                    return True
-                except AttributeError as e :
-                    error("""Failed to render Template %s 
-                            Render Engine Error %s
-                            typically the context structure is wrong %s""" %
-                            (g.TEMPLATE_TO_RENDER, 
-                            str(e),
-                            str(g.CONTEXT) 
-                            )
-                        )
-                    return False
-            else:
-                error('Not Critical: ran the app but did not have template to process ')
-        return True
-    else:
-        error('Error could not find  %s command in %s '%(papp_command, papp_filename), '')    
-
-    return False
+    return to_render
 
 def add_globals_to_Context():
-    #add the enviroment and headers 
+    """
+    add the enviroment and headers to the globals.CONTEXT.
+    this is called prior to CONTEXT being passed into the HTML rendering engin
+    """
+    #
     g.CONTEXT.update({'HEADERS': g.HEADERS})
     g.CONTEXT.update({'IMAGES':g.ENVIRO.get('IMAGES','')})
     g.CONTEXT.update({'DOCS':g.ENVIRO.get('DOCS','')})
@@ -321,6 +353,16 @@ def add_globals_to_Context():
     return True
         
 def match_uri_to_app():
+    """
+        uses the global.ENVIRO[URI_PATH] variable searches through globals.APPSTACK
+        locking for possible match , then copies the APPSTACK entry into the globals.ENVIRO[PYAPP_TO_RUN],
+        if no match is found it is set to NONE 
+        first search is a simple match using the entire uri_path to match to the APP_STACK entry
+        second search then breaks the URI_PATH into sections breaking at "/" to find a match
+        third search then does second serach in reverse. 
+        fall back is to go back to the root app defined with / in globals.APPSTACK
+        if no root is set then it is set to NONE. 
+    """
     #lets do the simple match first
     if g.ENVIRO['URI_PATH'] in g.APPSTACK :
         g.ENVIRO['PYAPP_TO_RUN'] = g.APPSTACK[g.ENVIRO['URI_PATH']]
@@ -350,6 +392,8 @@ def match_uri_to_app():
     if '/' in g.APPSTACK and (len(g.ENVIRO['URI_PATH'])>0 and g.SERVE_STATIC_FILES==False) :
         g.ENVIRO['PYAPP_TO_RUN'] = g.APPSTACK['/']
         return True
+    else :   
+        g.ENVIRO['PYAPP_TO_RUN'] = None ##all has failed to set the pyapp to run to None 
     ## no root command has been setup 
     g.ENVIRO['URI_PATH_NOT_MATCHED']= g.ENVIRO['URI_PATH']
     return False
@@ -359,18 +403,32 @@ def check_app_in_appstack():
         return True
     return False
 
-def build_template(papp_name='', ptstack=[], pupdate_global=True ):
+def build_template(papp_name='', ptstack=[], pupdate_global=True, p_check_components=True ):
+    """
+        papp_name: name of the application  that has been called
+        ptstask : template stack to build the tempalte
+        pupdate_global: update the globals.TEMPLATE_TO_RENDER 
+        p_check_components: compare the components listed in the Template stack 
+        to are newer than the built template in the cache   
+        Constructs the template to be render from the different files listed in the Template_Stake
+        Before building a new template it 
+    """
     _error_mess = ''
+    _template_name = papp_name + g.TEMPALATE_EXTENSION
+    _fpath_template=  g.ENVIRO.get('TEMPLATE_CACHE_PATH',os.getcwd()) + _template_name
     if pupdate_global:
-        g.TEMPLATE_TO_RENDER = g.ENVIRO['TEMPLATE_CACHE_PATH'] + papp_name + g.TEMPALATE_EXTENSION
-    if template_cache_is_in(papp_name + g.TEMPALATE_EXTENSION):
-        return True
+        g.TEMPLATE_TO_RENDER =_fpath_template
+    if template_cache_is_in(_template_name, pupdate_global) :
+        if p_check_components :
+            if not template_age_vs_parts_age(_fpath_template, ptstack):
+                return True
     ## YES NOT pythonic but need to know if on first item in the list
-    ## and can not pop it as it would alter this stack during run time 
+    ## and can not pop it as it would alter the global stack during run time 
     ## we do not want to do that...  
     _bts = ''
+    _path = g.ENVIRO.get('TEMPLATE_PATH', '')
     for  _i in  ptstack: 
-        _fp = g.ENVIRO['TEMPLATE_PATH']+_i 
+        _fp = _path+_i 
         _rstring = '<TEMPLATE name="%s"/>' % (_i)
         if os.path.isfile(_fp):
             _tp = open(_fp, 'r')
@@ -386,37 +444,108 @@ def build_template(papp_name='', ptstack=[], pupdate_global=True ):
             error('Failed to find the template %s for app %s' %(_i, papp_name), 'build template')
     return template_cache_put_in(papp_name + g.TEMPALATE_EXTENSION , _bts)
 
-def template_cache_is_in(pkey_value): #returns true if the cached file is found and set global template_to_render 
+def template_age_vs_parts_age(p_rendered_template='', ptstack={} ):
+    """ Compares the age of an allready rendered template to the component parts of the template 
+    if component parts of the template are newer than the rendered template return False.  
+    """
+    _date = os.path.getctime(p_rendered_template)
+    _path = g.ENVIRO.get('TEMPLATE_PATH', '')
+    for _cts in ptstack:
+        if _date < os.path.getctime(_path +_cts):
+            return False
+    return True
+
+def template_cache_is_in(pkey_value, set_global=True): #returns true if the cached file is found and set global template_to_render 
     ##todo is refactor the render engine to work on file like objects instead of paths
     ## this allow storing  pickled objects in memcache and use of spooled in memory temp files 
-    _path = g.ENVIRO['TEMPLATE_CACHE_PATH']
-    if g.ENVIRO['MEMCACHE_USE']:
+    _path = g.ENVIRO.get('TEMPLATE_CACHE_PATH','')
+    if g.ENVIRO.get('MEMCACHE_USE', False):
         cached_file = g.MEMCACHE.get(pkey_value)
         if cached_file is None:
             return False
         tfile = open(_path+pkey_value, 'w+b')
         tfile.write(cached_file)
         tfile.close() 
+        if not set_global:
+            return True
         g.TEMPLATE_TO_RENDER = _path + pkey_value 
         return True    
     elif os.path.isfile(_path+pkey_value):
         fpath =  _path + pkey_value 
-        age = dt.fromtimestamp(os.path.getmtime(fpath)) + td(seconds=g.ENVIRO['TEMPLATE_CACHE_AGING_SECONDS'])
+        age = dt.fromtimestamp(os.path.getmtime(fpath)) + td(seconds=g.ENVIRO.get('TEMPLATE_CACHE_AGING_SECONDS', 30))
         if dt.now() > age :
             os.remove(fpath)
             return False
+        if not set_global:
+            return True
         g.TEMPLATE_TO_RENDER = _path + pkey_value
         return True
     return False
     
 def template_cache_put_in(key_value, content ):
-    if g.ENVIRO['MEMCACHE_USE']:
+    if g.ENVIRO.get('MEMCACHE_USE', False):
         g.MEMCACHE.set(key_value, content) ##this will need more work to probably have to use pickle
-    path = g.ENVIRO['TEMPLATE_CACHE_PATH']
+    path = g.ENVIRO.get('TEMPLATE_CACHE_PATH', '')
     cfile = open(path+key_value, 'w')
     cfile.write(content)
     cfile.close()
     return True
+
+def template_cache_get(pkey_value, preturn_type='string', pmode='r'):
+    """
+        pkey_value : id key of the template in the cache
+        return_type :  string returns the file contents; fpn returns the full path to the file, fo returns the file object 
+        return_type is ignored if cache type is anything other than file
+        pmode: mode the file is opened in only used when fo is passed in  
+        get the template out of the cache and 
+    """
+    if g.ENVIRO.get('MEMCACHE_USE', False):
+        return g.MEMCACHE.get(key_value)
+    
+    path = g.ENVIRO.get('TEMPLATE_CACHE_PATH', '')
+    if preturn_type=='fpn':
+        return path 
+    elif preturn_type=='string':
+        cfile = open(path+key_value, 'r')
+        return cfile.read()
+    elif preturn_type== 'fo':
+        return   open(path+key_value, pmode)
+
+    return None
+
+def result_cache_put_in(key_value, content):
+    """ this holds the results for previous runs of an app. 
+    """
+    if g.ENVIRO.get('MEMCACHE_USE', False):
+        g.MEMCACHE.set(key_value, content) ##this will need more work to probably have to use pickle
+    path = g.ENVIRO.get('TEMPLATE_TMP_PATH','')
+    cfile = open(path+key_value, 'w', encoding='utf-8')
+    cfile.write(content)
+    cfile.close()
+    return True
+
+def results_cache_is_in(pkey_value, p_age, p_put_into_buffer): 
+    """returns true if the cached file is found  and the age is less than p_age
+    if the p_put_into_buffer reads the file into the buffer
+    """
+    _path = g.ENVIRO.get('TEMPLATE_TMP_PATH','')
+    if g.ENVIRO.get('MEMCACHE_USE', False):
+        if pkey_value not in g.MEMCACHE:
+            return False
+        if p_put_into_buffer:
+            g.OUTPUT = g.MEMCACHE.get(pkey_value)
+        return True 
+    elif os.path.isfile(_path+pkey_value):
+        fpath =  _path + pkey_value 
+        age = dt.fromtimestamp(os.path.getmtime(fpath)) + td(seconds=p_age)
+        if dt.now() > age :
+            os.remove(fpath)
+            return False
+        if p_put_into_buffer:
+            _f = open(fpath, encoding='utf-8')
+            g.OUTPUT = _f.read()
+        return True
+    return False
 
 def put_query_result_in():
     return None
@@ -451,6 +580,76 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
     g.ENVIRO['DOCS']['furlpath']= build_url_root_path() + g.ENVIRO['DOCS']['urlpath']
     g.ENVIRO['MEDIA']['furlpath']=build_url_root_path() + g.ENVIRO['MEDIA']['urlpath']
     
+    #Load Parse and Process the POST and GET commands
+
+    if e.get('REQUEST_METHOD').upper() == 'POST':
+        return parse_POST(e, True)
+    elif e.get('REQUEST_METHOD').upper() == 'GET':
+        return parse_GET(e,True)
+    return False
+
+def parse_POST(web_enviro, update_globals=True):
+    script = ( web_enviro.get('REQUEST_URI', '').encode('iso-8859-1').decode(errors='replace') or
+            web_enviro.get('SCRIPT_NAME', '').encode('iso-8859-1').decode(errors='replace') or 
+            web_enviro.get('REDIRECT_URL', '').encode('iso-8859-1').decode(errors='replace')
+        )
+    g.POST.update({'url_path': script})
+    g.POST.update({'POST_COUNT':0})
+    try:
+        request_body_size = int(web_enviro.get('CONTENT_LENGTH', 0))
+    except (ValueError):
+        request_body_size = 0
+    if request_body_size > 0:
+        form_data = parse_qs(web_enviro.get('wsgi.input').read(request_body_size))
+        for key, value in form_data.items():
+            g.POST.update({bytes_to_text(key): [bytes_to_text(i) for i in value]})
+            g.POST['POST_COUNT']+= 1
+        g.CSB = g.POST.get('CSB', [0])[0]
+    g.POST.update({'CONTENT_TYPE': web_enviro.get('CONTENT_TYPE')})
+    match_uri_to_app() # find the python applicaiton to run 
+    load_cookies(web_enviro)  # load the cookies sent and may load a save session state 
+    return True
+
+def parse_GET(web_enviro, update_globals=True):
+    _url = bytes_to_text(web_enviro.get('REQUEST_URI', b''))
+    g.GET.update({"PATH_TO_APP":bytes_to_text(web_enviro.get('mod_wsgi.path_info','')) })
+    g.GET.update({'SCRIPT_ROOT':bytes_to_text(web_enviro.get('mod_wsgi.script_name',''))})
+    if _url is None:
+        return True
+    else :
+        script = ( _url.encode('iso-8859-1').decode(errors='replace') or 
+                    _url.encode('iso-8859-1').decode(errors='replace')
+                )      
+    g.GET.update({'url_path': script})
+    qs = web_enviro.get('QUERY_STRING', '')
+    g.GET.update({'QUERY_STRING_COUNT':0})
+    if isinstance(qs, bytes): ##url encoded data typically ascii
+        try:
+            qs = parse_qs(qs.decode(g.ENVIRO.get('ENCODING', 'utf-8')))
+        except UnicodeDecodeError:
+            # ... but some user agents are misbehaving :-(
+            qs = parse_qs(qs.decode('iso-8859-1'))
+    else:
+        qs=parse_qs(qs)
+    if len(qs) > 0:
+        for key, value in qs.items():
+            g.GET.update({
+                bytes_to_text(key) :
+                [bytes_to_text(i) for i in value]
+            })
+            g.GET['QUERY_STRING_COUNT']+=1
+        g.CSB = g.POST.get('CSB', [0])[0]
+    match_uri_to_app() # find the python applicaiton to run 
+    load_cookies(web_enviro) # load the cookies sent and may load a save session state 
+    return True
+
+def sanitize_input(p_input):
+    pass
+
+def sanitize_html(p_input):
+    pass
+
+def load_cookies(e):
     _co = session.load_cookies(e.get('HTTP_COOKIE'))
     if _co:
         if _co.get('session_id'): ##see if the session id is set and if we have previous get/post event to process
@@ -460,62 +659,7 @@ def load_enviro(e): ##scan through the enviroment object setting up our global o
             if session.load_session(_co.get('session_id')): 
                 return True
     else : ##have no session established 
-        session.create_session()     
-
-    #Load Parse and Process the POST and GET commands
-    script = ''
-    command = ''
-    qs =[]
-    if e.get('REQUEST_METHOD').upper() == 'POST':
-        script = ( e.get('REQUEST_URI', '').encode('iso-8859-1').decode(errors='replace') or
-                e.get('SCRIPT_NAME', '').encode('iso-8859-1').decode(errors='replace') or 
-                e.get('REDIRECT_URL', '').encode('iso-8859-1').decode(errors='replace')
-            )
-        g.POST.update({'url_path': script})
-        g.POST.update({'POST_COUNT':0})
-        try:
-            request_body_size = int(e.get('CONTENT_LENGTH', 0))
-        except (ValueError):
-            request_body_size = 0
-        if request_body_size > 0:
-            form_data = parse_qs(e['wsgi.input'].read(request_body_size))
-            for key, value in form_data.items():
-                g.POST.update({bytes_to_text(key): [bytes_to_text(i) for i in value]})
-                g.POST['POST_COUNT']+= 1
-            g.CSB = g.POST.get('CSB', [0])[0]
-        g.POST.update({'CONTENT_TYPE': e.get('CONTENT_TYPE')})
-        return True
-    elif e.get('REQUEST_METHOD').upper() == 'GET':
-        _url = bytes_to_text(e.get('REQUEST_URI'))
-        g.GET.update({"PATH_TO_APP":bytes_to_text(e.get('mod_wsgi.path_info')) })
-        g.GET.update({'SCRIPT_ROOT':bytes_to_text( e.get('mod_wsgi.script_name'))})
-        if _url is None:
-            return True
-        else :
-            script = ( _url.encode('iso-8859-1').decode(errors='replace') or 
-                        _url.encode('iso-8859-1').decode(errors='replace')
-                    )      
-        g.GET.update({'url_path': script})
-        qs = e.get('QUERY_STRING')
-        g.GET.update({'QUERY_STRING_COUNT':0})
-        if isinstance(qs, bytes): ##url encoded data typically ascii
-            try:
-                qs = parse_qs(qs.decode(g.ENVIRO['ENCODING']))
-            except UnicodeDecodeError:
-                # ... but some user agents are misbehaving :-(
-                qs = parse_qs(qs.decode('iso-8859-1'))
-        else:
-            qs=parse_qs(qs)
-        if len(qs) > 0:
-            for key, value in qs.items():
-                g.GET.update({
-                    bytes_to_text(key) :
-                    [bytes_to_text(i) for i in value]
-                })
-                g.GET['QUERY_STRING_COUNT']+=1
-            g.CSB = g.POST.get('CSB', [0])[0]
-        return True
-    return False
+        return session.create_session() 
 
 def check_CSB(pcsb):
     """ antime check_CSB called the database
@@ -550,7 +694,7 @@ def save_CSB(puser_id):
     _con.commit()
     return g.CSB
 
-def bytes_to_text(_p, encode=g.ENVIRO['ENCODING']):
+def bytes_to_text(_p, encode=g.ENVIRO.get('ENCODING', 'utf-8')):
     if isinstance(_p, bytes):
        return str(_p, encode, 'replace')
     return _p
@@ -576,6 +720,31 @@ def connect_to_db(host='127.0.0.1',
 
 def get_db_connection(connection_name = 'PG1'): #either the index or named connection
     return g.CONN.get(connection_name)
+
+def run_sql_command(p_sql, p_topass= None):
+    _con = g.CONN.get('PG1',None)
+    if _con is None:
+        return {}
+    _cur = _con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) 
+    try :
+        _cur.execute(p_sql, p_topass)
+    except Exception as e:  #yes this is a generic catch but there around hundred different possible execptions declared in pyscopg2 class 
+        import traceback as tb 
+        _stack = tb.print_stack()
+        _last_command = cur.query.decode('utf-8')
+        _db_error = [ x for x in e.args]
+        _error_mess = """SQL ERROR the last command sent ' %(command)s
+        caused the following error %(error)s 
+        Exception Call Stack %(stack)s""" % {'command':_last_command, 'error':_db_error, 'stacks':_stack}   
+        error(_error_mess,'pyUwf.py:run_sql_command') 
+        _con.rollback()
+        return _return 
+    try:
+        _return = _cur.fetchall()
+        _con.commit()
+        return _return
+    except psycopg2.ProgrammingError : ##this is annoying can not call any fetches with zero results as it throws this error message
+       return {'state': _con.commit() }
 
 def create_template_engine():
     # test to see if the template has been create if not
@@ -634,31 +803,52 @@ def error(pmessage =' not set ', psource='unkown',
         return True
     return True
 
-def build_template_key(pdic={}, pout='file.ctemplates', ptype='file' ):
-    
+def build_template_key(pdic={}, pout='file.ctemplates', ptype='file', html_start= '', html_end= '', html_start_loob = '', html_end_loop='' ):
+    """
+    pdic: dictionary to iterate over creating the template tags
+    pout: is the file name to writ out to
+    ptype: default file or string writes out to a file or returns a string parsed dictoinary
+    """
+    _r = ''
     if isinstance(pdic, dict):
-        _r = break_apart_dic(pdic)
+        _r = break_apart_dic(pdic, '', html_start, html_end, html_start_loob, html_end_loop)
+    
+        if ptype == 'file':
+            if os.path.exists(pout) :
+                return 
+            _f = open(pout,'w')
+            _f.write(_r)
+        elif ptype == 'string':
+            return _r
+    return ''
 
-def break_apart_dic(pdic={}, p_prefix=''):
+def break_apart_dic(pdic={}, p_prefix='', html_start= '', html_end= '', html_start_loob = '', html_end_loop=''):
     _output = ''
+    if len(p_prefix) >0 :
+        _op = p_prefix + '.'
+    else:
+        _op = ''
     if isinstance(pdic, dict):
         for key, value in sorted(pdic.items()):
-            #print (p_prefix + '.'+ key+ '.' +str(value))
             if isinstance(value, list):
-                _output = _output + break_apart_dic(value, key)
+                _output = _output + break_apart_dic(value, key, html_start, html_end, html_start_loob, html_end_loop )
             elif p_prefix >'' and isinstance(value,dict):
-                _output = _output + break_apart_dic(value, p_prefix + '.' + key)
+               
+                _output = _output + break_apart_dic(value, _op + key, html_start, html_end, html_start_loob, html_end_loop)
             elif isinstance(value, dict):
-                _output = _output +  break_apart_dic(value, key )
+                _output = _output +  break_apart_dic(value, key, html_start, html_end, html_start_loob, html_end_loop )
             else:
-                _output = _output + '<TMPL_VAR name="%s"> %s' % (p_prefix + '.' + key, chr(10))
+                _output =  '%s %s <TMPL_VAR name="%s%s"> %s %s' % (_output, html_start ,_op ,key, html_end, chr(10), )
     elif isinstance(pdic, list):
-        _output = '<TMPL_LOOP name="%s"> %s %s' % (p_prefix, chr(10), chr(9))
-        for i in value:
+        _output = '%s<TMPL_LOOP name="%s"> %s %s' % (html_start_loob, p_prefix, chr(10), chr(9)) 
+        for i in pdic:
             if isinstance(i, dict):
-                _output + (break_apart_dic(i, p_prefix ))
-        _output = _output + '%s</TMPL_LOOP>' +chr(10) 
+                _output + break_apart_dic(i, p_prefix, html_start, html_end, html_start_loob, html_end_loop )
+        _output =  '%s</TMPL_LOOP> %s %s' %(_output, html_end_loop, chr(10) )
     return _output 
+
+def build_html_template(phtml_header={}, pinclude_templates={},  pdic={} ):
+    pass
 
 def build_url_root_path():
     """builds the current root URL path http(s)://server(:port)/
@@ -894,5 +1084,36 @@ def identify_protocol (p_protocol):
         return 'https://' 
     dd = ''
     dd.find(':')
+
+def add_to_APPSTACK(app_function_name, 
+            template_stack,
+            filename, 
+            path,
+            command , 
+            security=False,
+            content_type='text/html',
+            server_cache_on=True,
+            server_cache_age=30,
+            cacheability='private',
+            cache_age=30):
+    """ todo need to at data sanity checks all these values before adding them to the appstack 
+    """
+
+    g.APPSTACK.update({app_function_name:
+        {'template_stack':template_stack,
+         'filename': filename, 
+         'path':path,
+         'command':command , 
+         'security':security ,
+         'content_type':content_type,
+         'server_cache_on':server_cache_on,
+         'server_cache_age':server_cache_age,
+         'cacheability':cacheability,
+         'cache_age':cache_age}
+        }
+        )
+
+def add_to_TEMPLATE_STACK():
+    pass
 
 #print(break_apart_dic(g.APPSTACK, '' ))

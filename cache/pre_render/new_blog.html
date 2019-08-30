@@ -4,6 +4,13 @@
 <!--[if IE 9 ]><html class="no-js ie ie9" lang="en"> <![endif]-->
 <!--[if (gte IE 8)|!(IE)]><!--><html class="no-js" lang="en"> <!--<![endif]-->
 <head>
+   	<!-- Java Script
+   ================================================== -->
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5/ckeditor.js"> </script>
+  <!-- <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"></script>
+   <!--<script>window.jQuery || document.write('<script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"><\/script>')</script> -->
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/main.js"></script>
 
    <!--- Basic Page Needs
    ================================================== -->
@@ -22,10 +29,6 @@
     <link rel="stylesheet" href="<TMPL_VAR name="STATIC.furlpath">/css/layout.css">  
     <link rel="stylesheet" href="<TMPL_VAR name="STATIC.furlpath">/css/media-queries.css">    
 
-   <!-- Script
-   ================================================== -->
-	<script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"></script>
-
    <!-- Favicons
 	================================================== -->
 	<link rel="shortcut icon" href="favicon.png" >
@@ -39,7 +42,7 @@
    	<div class="row">
    		<div class="header-content twelve columns">
 
-		      <h1 id="logo-text"><a href="index.html" title="">zSheep Blog</a></h1>
+		      <h1 id="logo-text"><a href="/" title="">zSheep Blog</a></h1>
 				<p id="intro"><TMPL_VAR name="SITE_NAME"></p>
 		</div>			
 
@@ -49,14 +52,17 @@
 		<a class="mobile-btn" href="#" title="Hide navigation">Hide Menu</a>
 	   	<div class="row">    		            
 			   	<ul id="nav" class="nav">
-			      	<li><a href="index.html">Home</a></li>
-			      	<li class="has-children"><a href="#">Dropdown</a>
-	                  <ul>
-	                     <li><a href="#">New Blog</a></li>
-	                     <li><a href="#">List Of Bogs</a></li>
-	                     <li><a href="#"></a></li>
-	                  </ul>
-	               </li>
+						<li><a href="view">Home</a></li>
+							<TMPL_IF name="SEC.USER_LOGGEDIN" value="True">
+								<li class="has-children"><a href="#">User Tools</a>
+									<ul>
+										<li><a href="/new_blog">New Blog</a></li>
+										<li><a href="#">List Of Bogs</a></li>
+										<li><a href="#"></a></li>
+									</ul>
+								</li>
+							</TMPL_IF>
+	               
 	               <li><a href="demo.html">Demo</a></li>	
 	               <li><a href="archives.html">Archives</a></li>
 			      	<li class="has-children current"><a href="single.html">Blog</a>
@@ -64,23 +70,46 @@
 	                     <li><a href="blog.html">Blog Entries</a></li>
 	                     <li><a href="single.html">Single Blog</a></li>	                     
 	                  </ul>
-			      	</li>		      	
-			      	<li><a href="page.html">Page</a></li>
+					  </li>	
+					<TMPL_IF name="SEC.USER_LOGGEDIN" value="True"> 
+							<li><a href="log_out">Log out <TMPL_VAR name="SEC.DISPLAY_NAME"> </a></li>
+					<TMPL_ELSE>
+						  <li><a href="log_in">Login</a></li>
+					</TMPL_IF>
 			   	</ul> <!-- end #nav -->			   	 
 	   	</div> 
 	</nav> <!-- end #nav-wrap -->  	     
 </header> <!-- Header End -->
 
-
    <!-- Content
 
    ================================================== -->
   
-   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5/ckeditor.js"> </script>
-   <textarea name="content" id="editor"></textarea>
+   
+   <form action="<TMPL_VAR name = "submit_command">" method="post">   
+      <input type="text" name="title" id="title" value="<TMPL_VAR name = "blog_tile">"  /><br>
+      <input type="hidden" name="blog_id" id="blog_id" value="<TMPL_VAR name = "blog_id">" />
+      <input type="hidden" name="CSB" value="<TMPL_VAR name = "CSB">" />
+      <textarea name="content" id="content" >hi there</textarea>
+      <input type="text" name="search_tags" id="search_tags" value="<TMPL_VAR name = "search_tags">"  />
+      <input type="submit" value="Submit">
+
+   </form>
    <script>
          ClassicEditor
-             .create( document.querySelector( '#editor' ) )
+             .create( document.querySelector( '#content' ),
+               {
+                  toolbar: [ 'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 
+                           'numberedList', 'blockQuote' ],
+                  heading: {
+                     options: [
+                        { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+                        { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+                        { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' }
+                     ]
+                  }
+               }
+              )
              .catch( error => {
                  console.error( error );
              } );
@@ -91,7 +120,8 @@
    </body>
 	<!-- Java Script
    ================================================== -->
-   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-   <script>window.jQuery || document.write('<script src="js/jquery-1.10.2.min.js"><\/script>')</script>
-   <script type="text/javascript" src="js/jquery-migrate-1.2.1.min.js"></script>  
-   <script src="js/main.js"></script>
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5/ckeditor.js"> </script>
+  <!-- <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"></script>
+   <!--<script>window.jQuery || document.write('<script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"><\/script>')</script> -->
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/main.js"></script>

@@ -4,6 +4,13 @@
 <!--[if IE 9 ]><html class="no-js ie ie9" lang="en"> <![endif]-->
 <!--[if (gte IE 8)|!(IE)]><!--><html class="no-js" lang="en"> <!--<![endif]-->
 <head>
+   	<!-- Java Script
+   ================================================== -->
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5/ckeditor.js"> </script>
+  <!-- <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"></script>
+   <!--<script>window.jQuery || document.write('<script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"><\/script>')</script> -->
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/main.js"></script>
 
    <!--- Basic Page Needs
    ================================================== -->
@@ -21,10 +28,6 @@
     <link rel="stylesheet" href="<TMPL_VAR name="STATIC.furlpath">/css/default.css">
     <link rel="stylesheet" href="<TMPL_VAR name="STATIC.furlpath">/css/layout.css">  
     <link rel="stylesheet" href="<TMPL_VAR name="STATIC.furlpath">/css/media-queries.css">    
-
-   <!-- Script
-   ================================================== -->
-	<script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"></script>
 
    <!-- Favicons
 	================================================== -->
@@ -67,7 +70,7 @@
 	                  </ul>
 					  </li>	
 					<TMPL_IF name="SEC.USER_LOGGEDIN" value="True"> 
-							<li><a href="log_out">Log out "<TMPL_VAR name="SEC.DISPLAY_NAME">" </a></li>
+							<li><a href="log_out">Log out <TMPL_VAR name="SEC.DISPLAY_NAME"> </a></li>
 					<TMPL_ELSE>
 						  <li><a href="log_in">Login</a></li>
 					</TMPL_IF>
@@ -91,9 +94,3 @@
    ================================================== -->
 
 <TEMPLATE name="js.html"
-	<!-- Java Script
-   ================================================== -->
-   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-   <script>window.jQuery || document.write('<script src="static/js/jquery-1.10.2.min.js"><\/script>')</script>
-   <script type="text/javascript" src="static/js/jquery-migrate-1.2.1.min.js"></script>  
-   <script src="static/js/main.js"></script>

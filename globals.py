@@ -4,16 +4,16 @@
 # the post and get dictionaries are not cleared 
 
 
-global APPSTACK ## disctionary of python files and commands to return html file
+APPSTACK={} ## disctionary of python files and commands to return html file
 global CONN ## connections to database servers
-global SEC ## user and password and parts of the website  a user is allowed to
+SEC = {} ## user and password and parts of the website  a user is allowed to
 global TEMP_ENGINE ##create the temp engine once then access it here
-global ENVIRO ##global server enviroment
-global HEADERS ##header recorders also contains the cookies
-global OUTPUT ##BUFFER in string its converted to bytes just prior to be sent back to mod_wsgi
-global POST ##POST command comming from webserver 
-global GET ## get commands comming from the server
-global TEMPLATE_STACK ##setups template Stack, a dictionary of list. This means you can have 
+ENVIRO = {} ##global server enviroment
+HEADERS ={} ##header recorders also contains the cookies
+OUTPUT = '' ##BUFFER in string its converted to bytes just prior to be sent back to mod_wsgi
+POST = {} ##POST command comming from webserver 
+GET = {} ## get commands comming from the server
+TEMPLATE_STACK = {} ##setups template Stack, a dictionary of list. This means you can have 
 #basic HTML page with headers css and dev tags, Setup is App/script file then a list of
 # files that get added together to build a page. example is such
 # {'index.py', ['main_page.pyhtml, search_bar.pyhtml', results.pyhtml] }
@@ -26,21 +26,23 @@ global TEMPLATE_STACK ##setups template Stack, a dictionary of list. This means 
 # calling render engine which is suppose to happen just prior returning results
 # to the web_client.  Template engine can be called out of order and the results placed
 # in the output buffer.
-global TEMPLATE_ENGINE
-global TEMPLATE_TO_RENDER ##the current template that is to be rendered
-global CONTEXT #location where to stick objects and variables that are latter passed 
+TEMPLATE_ENGINE = {}
+TEMPLATE_TO_RENDER = {} ##the current template that is to be rendered
+CONTEXT = {} #location where to stick objects and variables that are latter passed 
 # into the rendering engine. this is Dictionary of list where the keys match the html tags    
-global MEMCACHE ## in memory cache templates, files, images, query results  
-global STATUS ##HTML STATUS  when setting manually do not for get a space after then number
-global ERRORSTACK ## stack of none fatal errors/warrings that have been created
+MEMCACHE = {} ## in memory cache templates, files, images, query results  
+STATUS = {} ##HTML STATUS  when setting manually do not for get a space after then number
+ERRORSTACK  = {} ## stack of none fatal errors/warrings that have been created
 global ERRORSSHOW
-global CLIENT_STATE
-global COOKIES
-global COOKIES_EXPIRES ##number in the future until a cookie expires  
+CLIENT_STATE = ''
+from http import cookies
+COOKIES= cookies.BaseCookie()
+COOKES_to_Send = cookies.BaseCookie()
+COOKIES_EXPIRES = 3000 ##seconds in the future until a cookie expires  
 global APPS_PATH  ## list of directories to append to the python sys path to find source files
-global CSB ##cross script block uuid must be added to all the forms and is checked during load enviro, 
+CSB = '' ##cross script block uuid must be added to all the forms and is checked during load enviro, 
             ## is save in user enviroment. it is reset after every request so single use only. 
-global HTTP_REDIRECT # variable to hold the url to redirect the client to.  
+HTTP_REDIRECT = '' # variable to hold the url to redirect the client to.  
 # If it is NOT NONE it will send the redirect to the client 
 
 HTTP_REDIRECT = None
@@ -69,16 +71,16 @@ ENVIRO={
     'URI_PATH_NOT_MATCHED':'',
     'SERVER_NAME':'',
     'SERVER_PORT':'',
-    'HTTP_HOST':'',
+    'HTTP_HOST':'', 
+    'STATIC_FILES_CACHE_AGE':600, ## Cache Age of static files the system assumes public storage allowed this can be overriden 
     'STATIC':{'urlpath':'/static', 'filepath':base_directory+'static/', 'furlpath':''},
     'IMAGES':{'urlpath':'/static/images', 'filepath':base_directory+'static/images/', 'furlpath':''},
     'TEMPLATE_PATH':base_directory+'templates/',
     'TEMPLATE_CACHE_PATH':base_directory+'cache/pre_render/', # location where the file are stored before being passed through template_engine
-    'TEMPLATE_CACHE_AGING_SECONDS':30,
+    'TEMPLATE_CACHE_AGING_SECONDS':300,
     'TEMPLATE_TMP_PATH':base_directory+'cache/post_render/', # location where the file are stored post rendering through template_engine
     'TEMPLATE_TYPE': 'file',  #ctemplate works off a string containing the html sent to it or path/filename to the html template 
     'URL_CURRENT_PATH':'',
-    
 }
 ERRORSTACK =[]
 ERRORSSHOW = True
@@ -95,17 +97,15 @@ from pyctemplate import compile_template  #default template engine
 
 TEMPLATE_ENGINE = compile_template  #map the function to this global 
 TEMPLATE_TO_RENDER = '' ##
-  
+##from APPS_PATH.sanitizers as sans
+##INPUT_SANITIZER = sans.
+##HTML_SANITIZER =    
  
 
 HEADERS={
     'Content-Type':'text/html;',
     'charset':'UTF-8',
 }
-
-from http import cookies
-COOKIES= cookies.BaseCookie()
-COOKIES_EXPIRES=30
 
 GET={}
 POST={}
@@ -125,7 +125,7 @@ SEC={
     'USER_CLIENT':'',
     'USER_ACCESS':[{'app_name_function':True,}],
     'USER_GROUP':[{'group_name': True}],
-    'USER_TIMER':600,
+    'USER_TIMER':60000,
 }
 from datetime import datetime, timedelta
 CLIENT_STATE = {
@@ -135,20 +135,26 @@ CLIENT_STATE = {
     'TIMEOUT':datetime.utcnow() + timedelta(seconds=SEC['USER_TIMER'])
     }
 
-##mapping app name and app function to physical/relative path 
-# on the server and if login is require
-# idea here is the be able to have the code outside apache path 
-# { App_name the url post/get: 
-#   { filename: "python_file":, 
-#     path: 'path to the file'  
-#     command:"function to call in python file" 
-#     security: bool,
-#     content_type: typicaly text/html  this is used by the http client know the type data that was sent 
-#   }
-# }
-# idea is to be similar to django urls function without the complexity 
-# after the enviroment is setup match_url_to_app is run 
+"""APPSTACK layout and logic
+ mapping app name and app function to physical/relative path 
+ on the server and if login is require
+ idea here is the be able to have the code outside apache path 
+ { App_name the url post/get: 
+   { filename: "python_file":, 
+     path: 'path to the file'  
+     command:"function to call in python file" 
+     security: bool,
+     content_type: typicaly text/html  this is used by the http client know the type data that was sent 
+     server_cache_on: if true tells the rendering engine not process the app but to send cache result
+     server_cache_age: the age in seconds on the cache before the server will render the results. 
+     client_cacheability: allows part of app to be set its respons as cacheable and the method used 
+     client_cache_age:30:
 
+   }
+ }
+ idea is to be similar to django urls function without the use of regular expressions to match url to functions
+ after the enviroment is setup match_url_to_app is run 
+"""
 APPSTACK = {
     '/':{ 'template_stack':'view',
             'filename':'blog', 
@@ -156,6 +162,10 @@ APPSTACK = {
             'command':'view' , 
             'security':False,
             'content_type': 'text/html',
+            'server_cache_on':True,
+            'server_cache_age':30,
+            'cacheability':'private',
+            'cache_age':30,
             },
     'view':{'template_stack':"view", 
             'filename':'blog', 
@@ -163,6 +173,10 @@ APPSTACK = {
             'command':'view',
             'security':False,
             'content_type':'text/html',
+            'server_cache_on':True,
+            'server_cache_age':30,
+            'cacheability':'private',
+            'cache_age':30,    
             },
     'view_category':{'template_stack':"view", 
             'filename':'blog', 
@@ -170,6 +184,10 @@ APPSTACK = {
             'command':'view_category',
             'security':False,
             'content_type':'text/html',
+            'server_cache_on':True,
+            'server_cache_age':30,
+            'client_cacheability':'private',
+            'client_cache_age':30,
             },
     'search_blog':{
             'template_stack':'list', 
@@ -178,40 +196,44 @@ APPSTACK = {
             'command':'search',
             'security':False,
             'content_type': 'text/html',
+            'server_cache_on':True,
+            'server_cache_age':30,
+            'cacheability':'private',
+            'cache_age':30,
             },
     'edit_blog':{'filename':'blog', 
               'template_stack':'blog_editor',
               'path':'.',
               'command':'edit_blog', 
-              'security':False,
+              'security':True,
               'content_type': 'text/html',
               },
     'new_blog':{'filename':'blog', 
               'template_stack':'blog_editor',
               'path':'.',
               'command':'new_blog', 
-              'security':False,
+              'security':True,
               'content_type': 'text/html',
               },
     'save_blog':{'filename':'blog', 
               'template_stack':'view',
               'path':'.',
               'command':'save_blog', 
-              'security':False,
+              'security':True,
               'content_type': 'text/html',
               },
     'blog_comment':{'template_stack':'view',
                     'filename':'blog_comment', 
                     'path':'.',
                     'command':'init', 
-                    'security':True,
+                    'security':False,
                     'content_type': 'text/html',
                     },
     'create_account':{'template_stack':'view', 
                       'filename':'ca', 
                       'path':'.', 
                       'command':'init', 
-                      'security':False,
+                      'security':True,
                       'content_type': 'text/html',
                     },
     'log_in':{'template_stack':'log_in',
@@ -234,19 +256,27 @@ APPSTACK = {
                   'command':'init', 
                   'security':False,
                   'content_type': 'text/html',
-                  },
+            },
+    'error':{'template_stack':'error',
+                  'filename':'error', 
+                  'path':'.', 
+                  'command':'show_errors', 
+                  'security':True,
+                  'content_type': 'text/html',
+            },
 }
-#Template stack layout 
-# { App_Nane / URL path relative website root
-#   [ list of html files that make up template.  ]
-# }
-# files must be in the template_path you can do subdirs but no relative imports
-# The idea here is you can include many templates to create big template prior
-# to being sent to the render engine.  Ctemplate also have include function
-# but the results are thrown away after every call.  building the templates this
-# allows for caching the result template.  
-# If templates do not use <$TEMPLATE$filename.html$TEMPLATE$>
-# flag the proceeding templates are appended at the end in order they show in the list.  
+"""Template stack layout 
+ { App_Nane / URL path relative website root
+   [ list of html files that make up template.  ]
+ }
+ files must be in the template_path you can do subdirs but no relative imports
+ The idea here is you can include many templates to create big template prior
+ to being sent to the render engine.  Ctemplate also have include function
+ but the results are thrown away after every call.  building the templates this
+ allows for caching the result template.  
+ If templates do not use <$TEMPLATE$filename.html$TEMPLATE$>
+ flag the proceeding templates are appended at the end in order they show in the list. 
+ """ 
 TEMPLATE_STACK={
     '/':['main.html', 
             'blog.html', 
