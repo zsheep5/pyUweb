@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 
 #config file is where all the globals of the app are created
 #you can add to any of the globals here in latter code just adds to it
@@ -34,11 +35,7 @@ MEMCACHE = {} ## in memory cache templates, files, images, query results
 STATUS = {} ##HTML STATUS  when setting manually do not for get a space after then number
 ERRORSTACK  = {} ## stack of none fatal errors/warrings that have been created
 global ERRORSSHOW
-CLIENT_STATE = ''
-from http import cookies
-COOKIES= cookies.BaseCookie()
-COOKES_to_Send = cookies.BaseCookie()
-COOKIES_EXPIRES = 3000 ##seconds in the future until a cookie expires  
+##seconds in the future until a cookie expires  
 global APPS_PATH  ## list of directories to append to the python sys path to find source files
 CSB = '' ##cross script block uuid must be added to all the forms and is checked during load enviro, 
             ## is save in user enviroment. it is reset after every request so single use only. 
@@ -51,67 +48,7 @@ base_directory = '/home/MAGWERKS.COM/justin/github/pyUweb/'
 #base_directory = '/home/justin/git_hub/pyUweb/'
 
 APPS_PATH = [base_directory+'apps']
-CSB = None
-CSB_STATUS = False  ##
-SERVE_STATIC_FILES= True ## this tells the system it will be servering the static files instead the webserver
-APACHE_ENVIRO= None
-ENVIRO={
-    'DOCS':{'urlpath':'/documents', 'filepath':base_directory+'static/documents/', 'furlpath':''},
-    'LOG_LEVEL': 'DEBUG',
-    'ENCODING':'utf-8',
-    'ERROR_RETURN_CLIENT':True,
-    'ERROR_LOG':'system',
-    'MEDIA':{'urlpath':'/media', 'filepath':base_directory+'static/media/', 'furlpath':''},
-    'MEMCACHE_USE':False, 
-    'PYAPP_TO_RUN':'',
-    'PROTOCOL':'http',
-    'SITE_NAME':'zSheep Blog',
-    'SCRIPT_NAME':'',
-    'URI_PATH': '',
-    'URI_PATH_NOT_MATCHED':'',
-    'SERVER_NAME':'',
-    'SERVER_PORT':'',
-    'HTTP_HOST':'', 
-    'STATIC_FILES_CACHE_AGE':600, ## Cache Age of static files the system assumes public storage allowed this can be overriden 
-    'STATIC':{'urlpath':'/static', 'filepath':base_directory+'static/', 'furlpath':''},
-    'IMAGES':{'urlpath':'/static/images', 'filepath':base_directory+'static/images/', 'furlpath':''},
-    'TEMPLATE_PATH':base_directory+'templates/',
-    'TEMPLATE_CACHE_PATH':base_directory+'cache/pre_render/', # location where the file are stored before being passed through template_engine
-    'TEMPLATE_CACHE_AGING_SECONDS':300,
-    'TEMPLATE_TMP_PATH':base_directory+'cache/post_render/', # location where the file are stored post rendering through template_engine
-    'TEMPLATE_TYPE': 'file',  #ctemplate works off a string containing the html sent to it or path/filename to the html template 
-    'URL_CURRENT_PATH':'',
-}
-ERRORSTACK =[]
-ERRORSSHOW = True
 
-ALLOWED_HOST_NAMES= ['localhost', '127.0.0.1', 'g-server', '192.168.1.72']
-
-
-if ENVIRO['MEMCACHE_USE']:
-    from pymemcache.client import mem
-    MEMCACHE = mem.Client(('localhost', 11211))
-
-
-from pyctemplate import compile_template  #default template engine
-
-TEMPLATE_ENGINE = compile_template  #map the function to this global 
-TEMPLATE_TO_RENDER = '' ##
-##from APPS_PATH.sanitizers as sans
-##INPUT_SANITIZER = sans.
-##HTML_SANITIZER =    
- 
-
-HEADERS={
-    'Content-Type':'text/html;',
-    'charset':'UTF-8',
-}
-
-GET={}
-POST={}
-CONTEXT={}
-
-CONN={}
 SEC={
     'REQUIRE_LOGGIN':False,
     'SSL_REQUIRE':False,
@@ -127,13 +64,70 @@ SEC={
     'USER_GROUP':[{'group_name': True}],
     'USER_TIMER':60000,
 }
-from datetime import datetime, timedelta
+
 CLIENT_STATE = {
-    'last_command':'',
-    'prev_state':'',
-    'USER_ID':'',
-    'TIMEOUT':datetime.utcnow() + timedelta(seconds=SEC['USER_TIMER'])
-    }
+        'last_command':'',
+        'prev_state':'',
+        'USER_ID':'',
+        'TIMEOUT':datetime.utcnow() + timedelta(seconds=SEC['USER_TIMER']),
+        'session_id':'',
+        }
+
+ENVIRO={
+    'DOCS':{'urlpath':'/documents', 'filepath':base_directory+'static/documents/', 'furlpath':''},
+    'LOG_LEVEL': 'DEBUG',
+    'ENCODING':'utf-8',
+    'ERROR_RETURN_CLIENT':True,
+    'ERROR_LOG':'system',
+    'MEDIA':{'urlpath':'/media', 'filepath':base_directory+'static/media/', 'furlpath':''},
+    'MEMCACHE_USE':False, 
+    'PYAPP_TO_RUN':'',
+    'PROTOCOL':'http',
+    'SITE_NAME':'zSheep Blog',
+    'SCRIPT_NAME':'',
+    'URI_PATH': '',
+    'SERVER_NAME':'',
+    'SERVER_PORT':'',
+    'HTTP_HOST':'', 
+    'SERVE_STATIC_FILES': True,
+    'STATIC_FILES_CACHE_AGE':600, ## Cache Age of static files the system assumes public storage allowed this can be overriden 
+    'STATIC':{'urlpath':'/static', 'filepath':base_directory+'static/', 'furlpath':''},
+    'IMAGES':{'urlpath':'/static/images', 'filepath':base_directory+'static/images/', 'furlpath':''},
+    'TEMPLATE_PATH':base_directory+'templates/',
+    'TEMPLATE_CACHE_PATH_PRE_RENDER':base_directory+'cache/pre_render/',
+    'TEMPLATE_CACHE_PATH_POST_RENDER':base_directory+'cache/post_render/', # location where the file are stored before being passed through template_engine
+    'TEMPLATE_CACHE_AGING_SECONDS':300,
+    'TEMPLATE_TYPE': 'file',  #ctemplate works off a string containing the html sent to it or path/filename to the html template 
+    'TEMPALATE_EXTENSION':'.html',
+    'STATUS':'200 ',
+    'URL_CURRENT_PATH':'',
+    'HEADERS':{
+        'Content-Type':'text/html;',
+        'charset':'UTF-8',
+        },
+}
+ERRORSTACK =[]
+ERRORSSHOW = True
+
+ALLOWED_HOST_NAMES= ['localhost', '127.0.0.1', 'g-server', '192.168.1.72']
+
+
+if ENVIRO['MEMCACHE_USE']:
+    from pymemcache.client import mem
+    MEMCACHE = mem.Client(('localhost', 11211))
+
+from pyctemplate import compile_template  #default template engine
+
+TEMPLATE_ENGINE = compile_template  #map the function to this global 
+TEMPLATE_TO_RENDER = '' ##
+##from APPS_PATH.sanitizers as sans
+##INPUT_SANITIZER = sans.
+##HTML_SANITIZER =    
+
+CONN={}
+
+
+
 
 """APPSTACK layout and logic
  mapping app name and app function to physical/relative path 
@@ -307,9 +301,7 @@ TEMPLATE_STACK={
     'error':['error.html'],
 }
 ## the template extension is 
-TEMPALATE_EXTENSION = '.html'
-STATUS='200 '
-OUTPUT = ''
+
 
 #list of comon content types 
 CONTENT_TYPES = {

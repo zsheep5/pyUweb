@@ -1,6 +1,7 @@
-import globals as g 
-import pyUweb as m 
+import pyUwf as m 
+#import globals as g 
 import session_controller as sc
+import traceback, sys, os
 
 
 def dump_secured_error_stack():
@@ -75,13 +76,44 @@ def dump_globals():  ##convert the globals So there easy to print out HTML rende
 
     return output
 
-def show_errors():
-    if sc.check_credentials('errors') :
-        return load_render_error_template(dump_secured_error_stack())
-    else : 
-        return load_render_error_template(dump_unsecured_error_stack())
+def show_errors(et='', pe=None, ENVIRO={}, TEMPLATE_ENGINE=None, 
+            POST={}, 
+            GET={}, 
+            CLIENT_STATE={},  
+            COOKIES={}, 
+            CONTEXT={},
+            CSB='',
+            TEMPLATE='', 
+            ):
+    
+    if pe is None or not isinstance(pe, Exception):
+        return ""
+    if len(et)==0:
+        return ""
+    
+    _exc_type, _exc_value, _exc_traceback = sys.exc_info()
+    _eslist = traceback.format_tb(_exc_traceback)
+    _post = m.check_dict_for_list(POST)
+    _get = m.check_dict_for_list(GET)
+    _context = m.add_to_Context({}, _post, _get, ENVIRO, CLIENT_STATE, COOKIES,  TEMPLATE, CSB)
+    _context.update({'CALL_STACK':tb_list_of_dicts('ERROR_STACK', _eslist)})
+    _context.update({'EXCEPTION_CLASS_NAME:':repr(pe)})
+    _context.update({'EXCEPTION':str(pe)})
+    _context.update({'CALL_STACK_LENGTH':len(_eslist)+1})
+    _output = TEMPLATE_ENGINE( et, 
+                    _context, 
+                    'string', 
+                    ENVIRO.get('TEMPLATE_CACHE_PATH_POST_RENDER', os.getcwd())
+                )
+    return True, _output
 
-def load_render_error_template(pcontext):
+def tb_list_of_dicts(pkey, plist):
+    _rldic = []
+    for _i in plist:
+        _rldic.append({pkey:_i})
+    return _rldic
+
+def load_render_error_template(pcontext, pt):
 
     if m.build_template('error', g.TEMPLATE_STACK.get('error'), False):
     
