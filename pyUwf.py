@@ -273,7 +273,7 @@ def run_pyapp(papp_filename='',
     Keep in mind the CSB entry may have already checked and deleted from the database there may be a need
     to set the pcheck_CSB to false on recurvise run_pyapp to allow additional processing  
 
-    if server side cacheing is used this means one can not relie on CSB 
+    if server side cacheing is used this means one can not relie on CSB no post form should ever use caching. 
 
     """
     if papp_filename == '':
@@ -802,7 +802,7 @@ def break_apart_dic(pdic={}, p_prefix='', html_start= '', html_end= '', html_sta
         _output = '%s<TMPL_LOOP name="%s"> %s %s' % (html_start_loob, p_prefix, chr(10), chr(9)) 
         for i in pdic:
             if isinstance(i, dict):
-                _output + break_apart_dic(i, p_prefix, html_start, html_end, html_start_loob, html_end_loop )
+                _output = _output + break_apart_dic(i, '', html_start, html_end, html_start_loob, html_end_loop )
         _output =  '%s</TMPL_LOOP> %s %s' %(_output, html_end_loop, chr(10) )
     return _output 
 
@@ -1104,3 +1104,4 @@ def convert_list_to_list_of_dict(plist=[], key_value='converted.' ):
         _count = _count + 1
     return _return_list_dict
 #print(break_apart_dic(g.APPSTACK, '' ))
+ 

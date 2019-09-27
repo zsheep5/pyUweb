@@ -29,14 +29,15 @@
         <tr><td><TMPL_VAR name="ERROR_STACK"></td> </tr>
     </TMPL_LOOP>  
 
-   </td> 
 </tr>
 <tr>
-    <th rowspan='<TMPL_VAR name="CALL_STACK_LENGTH">'>POST </th>
-        <tr><td>server path: <TMPL_VAR name="DOCS.filepath"> </td></tr>
-        <tr><td> full url path: <TMPL_VAR name="DOCS.furlpath"> </td></tr>
-        <tr><td> short url path: <TMPL_VAR name="DOCS.urlpath"> </td></tr>
-    </td>
+    <th rowspan='<TMPL_VAR name="POST_LENGTH">'>POST </th>
+        $post
+    
+</tr>
+<tr>
+    <th rowspan='<TMPL_VAR name="GET_LENGTH">'>GET </th>
+        $get  
 </tr>
 
 <tr>
@@ -44,7 +45,6 @@
         <tr><td>server path: <TMPL_VAR name="DOCS.filepath"> </td></tr>
         <tr><td> full url path: <TMPL_VAR name="DOCS.furlpath"> </td></tr>
         <tr><td> short url path: <TMPL_VAR name="DOCS.urlpath"> </td></tr>
-    </td>
 </tr>
 <tr> 
         <th rowspan="4"> Image Settings </th>      

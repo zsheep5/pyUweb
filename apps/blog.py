@@ -21,7 +21,12 @@ def view(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, COOKIES={}, CONTEXT={}, TE
             _key = _blog.get('blog_id',-1)
         _r, CONTEXT = get_comments(_key, CONTEXT=CONTEXT)
         _r, CONTEXT = get_blog_counts(_key, CONTEXT=CONTEXT)
-        _r, CONTEXT = get_cats(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE)
+
+        _r, CONTEXT = get_cats( m.check_dict_for_list(POST),  
+                                m.check_dict_for_list(GET), 
+                                ENVIRO, CLIENT_STATE, 
+                                COOKIES, CONTEXT, 
+                                TEMPLATE, TEMPLATE_ENGINE)
         _ouput = TEMPLATE_ENGINE(TEMPLATE, 
                             CONTEXT, 
                             'string', 

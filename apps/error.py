@@ -1,5 +1,5 @@
 import pyUwf as m 
-#import globals as g 
+import globals as g 
 import session_controller as sc
 import traceback, sys, os
 
@@ -95,17 +95,29 @@ def show_errors(et='', pe=None, ENVIRO={}, TEMPLATE_ENGINE=None,
     _eslist = traceback.format_tb(_exc_traceback)
     _post = m.check_dict_for_list(POST)
     _get = m.check_dict_for_list(GET)
-    _context = m.add_to_Context({}, _post, _get, ENVIRO, CLIENT_STATE, COOKIES,  TEMPLATE, CSB)
+    _phtml = m.build_template_key(pdic=_post, ptype='string', html_start='<tr><td>', html_end='</td></tr>' )
+    _ghtml = m.build_template_key(pdic=_get, ptype='string', html_start='<tr><td>', html_end='</td></tr>' )
+    
+    et = et.replace('$post', _phtml)
+    et = et.replace('$get', _ghtml)
+
+    _context = m.add_to_Context({}, {}, {}, ENVIRO, CLIENT_STATE, COOKIES,  TEMPLATE, CSB)
+    _context.update(_post)
+    _context.update(_get)
     _context.update({'CALL_STACK':tb_list_of_dicts('ERROR_STACK', _eslist)})
     _context.update({'EXCEPTION_CLASS_NAME:':repr(pe)})
     _context.update({'EXCEPTION':str(pe)})
     _context.update({'CALL_STACK_LENGTH':len(_eslist)+1})
+    _context.update({'POST_LENGTH':len(_post)+1})
+    _context.update({'GET_LENGTH':len(_get)+1})
     _output = TEMPLATE_ENGINE( et, 
                     _context, 
                     'string', 
                     ENVIRO.get('TEMPLATE_CACHE_PATH_POST_RENDER', os.getcwd())
                 )
     return True, _output
+
+
 
 def tb_list_of_dicts(pkey, plist):
     _rldic = []

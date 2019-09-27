@@ -97,6 +97,7 @@ def log_in( POST ={}, GET={}, ENVIRO={}, CLIENT_STATE={}, COOKIES={}, CONTEXT={}
             ##have no previouse state to restore go back to the page root
             APPSTACK = m.get_APPSTACK()
             _ap = APPSTACK['/']
+            CLIENT_STATE.update({'APPSTACK':_ap})
             return m.run_pyapp( 
                     papp_filename= _ap['filename'],
                     papp_path=     _ap['path'],
