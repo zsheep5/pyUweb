@@ -537,7 +537,6 @@ def results_cache_put_in(key_value, content, ENVIRO={}):
 
 def results_cache_is_in(pkey_value, p_age, ENVIRO={}): 
     """returns true if the cached file is found  and the age is less than p_age
-    if the p_put_into_buffer reads the file into the buffer
     """
     _path = ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER','')
     if ENVIRO.get('MEMCACHE_USE', False):
