@@ -116,9 +116,12 @@ if ENVIRO['MEMCACHE_USE']:
     from pymemcache.client import mem
     MEMCACHE = mem.Client(('localhost', 11211))
 
-from pyctemplate import compile_template  #default template engine
+import sys
+sys.path.append('/home/MAGWERKS.COM/justin/github/ptyhon_HTE/' )
+#_loca = importlib.util.spec_from_file_location('python_html_parser', '../ptyhon_HTE/')
+from python_html_parser import render_html  #default template engine
 
-TEMPLATE_ENGINE = compile_template  #map the function to this global 
+TEMPLATE_ENGINE = render_html  #map the function to this global 
 TEMPLATE_TO_RENDER = '' ##
 ##from APPS_PATH.sanitizers as sans
 ##INPUT_SANITIZER = sans.

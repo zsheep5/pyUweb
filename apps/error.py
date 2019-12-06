@@ -110,10 +110,11 @@ def show_errors(et='', pe=None, ENVIRO={}, TEMPLATE_ENGINE=None,
     _context.update({'CALL_STACK_LENGTH':len(_eslist)+1})
     _context.update({'POST_LENGTH':len(_post)+1})
     _context.update({'GET_LENGTH':len(_get)+1})
-    _output = TEMPLATE_ENGINE( et, 
-                    _context, 
-                    'string', 
-                    ENVIRO.get('TEMPLATE_CACHE_PATH_POST_RENDER', os.getcwd())
+    _output = TEMPLATE_ENGINE( pfile = et, 
+                    ptype = 'string'
+                    pcontext =_context, 
+                    preturn_type = 'string'
+                    pcache_path = ENVIRO.get('TEMPLATE_CACHE_PATH_POST_RENDER', os.getcwd())
                 )
     return True, _output
 

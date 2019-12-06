@@ -718,8 +718,9 @@ def create_template_engine():
     # test to see if the template has been create if not
     # import the default engine and put it in here
     if g.TEMPLATE_ENGINE:
-        from pyctemplate import compile_template  #template engine
-        g.TEMP_ENGINE=compile_template
+        #from pyctemplate import compile_template  #template engine
+        from python_html_parser import render_html
+        g.TEMP_ENGINE=render_html
     return True
 
 def get_template_engine():
