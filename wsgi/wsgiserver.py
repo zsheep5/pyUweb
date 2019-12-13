@@ -1611,7 +1611,7 @@ class ThreadPool(object):
             worker.start()
         for worker in self._threads:
             while not worker.ready:
-                time.sleep(.1)
+                time.sleep(.01)
 
     def _get_idle(self):
         """Number of worker threads which are idle. Read-only."""

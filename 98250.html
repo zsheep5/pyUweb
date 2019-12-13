@@ -1,0 +1,34 @@
+ <* This is a comment *>
+    File var Name: <TMPL_var name="varName"> 
+    <TMPL_LOOP name="aLoop"> 
+    <li><a href=
+    file _Loop has var <TMPL_var name="loopVar"> 
+        value <TMPL_var name="loopVar2"> 
+    </a></li>
+    </TMPL_LOOP> 
+        rowcount: <TMPL_var name="sweet.name">
+        Sweet name: <TMPL_var name="sweet.name">
+        Sweet price: <TMPL_var name="sweet.price">
+    <TMPL_IF name="sweet.isBig" value="44">
+        Sweet is big
+    </TMPL_IF>
+
+    <TMPL_IF name="sweet.isBig" value="66">
+        test failed if Sweet is big
+        <TMPL_var name="sweet.price">
+    <TMPL_ELSEIF name="sweet.isBig" value="44">
+        test children
+        <TMPL_var name="sweet.price">
+        <TMPL_IF name="sweet.name" value="haha1" >
+            testing nested
+            <TMPL_IF name="sweet.name" value="haha1" >
+                test3 nested
+            </TMPL_IF>
+        </TMPL_IF>
+    <TMPL_ELSEIF name="sweet.isBig" value="77">
+      another test
+    <TMPL_ELSE name="sweet.isBig" value="44">
+    </TMPL_IF>
+
+    <TMPL_FUNCTION len(sweet.isBig) >
+<TMPL_INCLUDE name = "include_98250.html" >

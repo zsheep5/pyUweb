@@ -1,4 +1,3 @@
-#import globals as g
 import session_controller as sc
 import pyUwf as m
 import psycopg2, psycopg2.extras 
@@ -8,33 +7,34 @@ from  urllib.parse import quote_plus as qp
 
 ## the view mode of the family blog.   
 ## lets get the last 15 items from the database as the default
-def view(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, COOKIES={}, CONTEXT={}, TEMPLATE='', TEMPLATE_ENGINE=None, CSB=''): 
+def view(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, COOKIES={}, CONTEXT={}, TEMPLATE='', TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}): 
     _key = -1
     if 'blogkey' in GET:
         _key = int(GET.get('blogkey',-1))
     elif 'blogkey' in POST:
         _key = int(POST.get('blogkey',-1))
-    _results, CONTEXT = get_blog_by_id(_key, CONTEXT)
+    _results, CONTEXT = get_blog_by_id(_key, CONTEXT, ENVIRO)
     if _results :
         if _key == -1 :
             _blog = CONTEXT.get('blog', {})
             _key = _blog.get('blog_id',-1)
-        _r, CONTEXT = get_comments(_key, CONTEXT=CONTEXT)
-        _r, CONTEXT = get_blog_counts(_key, CONTEXT=CONTEXT)
+        _r, CONTEXT = get_comments(_key, CONTEXT=CONTEXT, ENVIRO=ENVIRO)
+        _r, CONTEXT = get_blog_counts(_key, CONTEXT=CONTEXT, ENVIRO=ENVIRO)
 
         _r, CONTEXT = get_cats( m.check_dict_for_list(POST),  
                                 m.check_dict_for_list(GET), 
                                 ENVIRO, CLIENT_STATE, 
                                 COOKIES, CONTEXT, 
                                 TEMPLATE, TEMPLATE_ENGINE)
-        _ouput = TEMPLATE_ENGINE(TEMPLATE, 
-                            CONTEXT, 
-                            'string', 
-                            ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER', ''))
+        _ouput = TEMPLATE_ENGINE(pfile = TEMPLATE, 
+                            ptype = 'string',
+                            pcontext = CONTEXT, 
+                            preturn_type ='string', 
+                            pcache_path = ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER', ''))
         return True, _ouput, ENVIRO, CLIENT_STATE, COOKIES, CSB
     return False, ''
 
-def search_blog(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, COOKIES={}, CONTEXT={}, TEMPLATE='', TEMPLATE_ENGINE=None, CSB=''):
+def search_blog(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, COOKIES={}, CONTEXT={}, TEMPLATE='', TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
     _text = ''
     if 'search_value' in POST:
         _text = POST['search_value']
@@ -52,7 +52,7 @@ def search_blog(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, COOKIES={}, CONTEXT
                 blog_tsv @@ query
             order by rank desc
                 """
-    _rec = m.run_sql_command(q_str, { 'search_value':_text })
+    _rec = m.run_sql_command(ENVIRO.get('CONN'), q_str, { 'search_value':_text })
     if len(_rec) > 0:
         _cat = []
         for _r in _rec:
@@ -67,15 +67,16 @@ def search_blog(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, COOKIES={}, CONTEXT
                     }
                 )
         CONTEXT.update({'search_results':_rec[0]})
-        _ouput = TEMPLATE_ENGINE(TEMPLATE, 
-                            CONTEXT, 
-                            'string', 
-                            ENVIRO.get('TEMPLATE_TMP_PATH'))
+        _ouput = TEMPLATE_ENGINE(pfile = TEMPLATE,
+                            ptype = 'string', 
+                            pcontext = CONTEXT, 
+                            preturn_type ='string', 
+                            pcache_path = ENVIRO.get('TEMPLATE_TMP_PATH'))
         return True, _ouput, ENVIRO, CLIENT_STATE, COOKIES, CSB
 
     return False
 
-def get_blog_by_id(pid=-1, CONTEXT={}):  ##should always return  record set in the form list of list 
+def get_blog_by_id(pid=-1, CONTEXT={}, ENVIRO={}):  ##should always return  record set in the form list of list 
     q_str = """select blog_id, blog_user_id,  blog_title, blog_date, 
                 blog_htmltext, array_to_string(search_tags, '<br>') as search_tags 
         from blog  """
@@ -83,7 +84,7 @@ def get_blog_by_id(pid=-1, CONTEXT={}):  ##should always return  record set in t
         q_str += """ order by blog_date desc """
     else :
         q_str += """ where blog_id = %(blogid)s""" 
-    _rec  = m.run_sql_command(q_str, { 'blogid':pid } )
+    _rec  = m.run_sql_command(ENVIRO.get('CONN'),q_str, { 'blogid':pid } )
     if len(_rec) > 0:
         CONTEXT.update({'blog':_rec[0]})
         return True, CONTEXT 
@@ -102,7 +103,7 @@ def build_pager():
 def get_more_results(p_id=-1, p_offset=0, p_limit=50):
     pass 
 
-def get_comments(p_id=-1, p_offset=0, p_limit=50, CONTEXT={}):
+def get_comments(p_id=-1, p_offset=0, p_limit=50, CONTEXT={}, ENVIRO={}):
     q_str = """ select bc_id , bc_blog_id , bc_parent_bc_id, bc_user_id,
 	            bc_date, bc_comment, bc_title, user_displayname, user_avatar,
                 (select count(bc_parent_bc_id) from blog_comments dd where dd.bc_id = bc_id) as bc_child_count 
@@ -111,13 +112,13 @@ def get_comments(p_id=-1, p_offset=0, p_limit=50, CONTEXT={}):
                 and bc_user_id = user_id 
                 limit %(p_limit)s  offset %(p_offset)s 
                 """
-    _rec = m.run_sql_command(q_str, { 'blogid':p_id, 'p_limit': p_limit, 'p_offset': p_offset } )
+    _rec = m.run_sql_command(ENVIRO.get('CONN'), q_str, { 'blogid':p_id, 'p_limit': p_limit, 'p_offset': p_offset } )
     if len(_rec) > 0:
         CONTEXT.update({'comments':_rec})
         return True, CONTEXT
     return False, CONTEXT
 
-def get_child_comments(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE,CSB=''):
+def get_child_comments(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE,CSB='', TEMPLATE_STACK={}):
     if 'bc_id' in GET and 'limit' in GET and 'offset' in GET:
 
         q_str = """ select bc_id , bc_blog_id , bc_parent_bc_id,
@@ -126,16 +127,17 @@ def get_child_comments(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLA
                     from  blog_comments where
                     bc_id  = %(bc_id)s 
                     limit %(limit)s  offset %(offset)s """
-        _rec = m.run_sql_command(q_str, { 'bc_id':g.GET.get(bc_id, 0), 
+        _rec = m.run_sql_command(ENVIRO.get('CONN'),q_str, { 'bc_id':g.GET.get(bc_id, 0), 
                             'p_limit': g.GET.get('limit', 0), 
                             'p_offset': p_offset.get('offset',50) } )
         _rec = cur.fetchall()
         if len(_rec) > 0:   
             CONTEXT.update({'child_comments':_rec})
-            _ouput = TEMPLATE_ENGINE(TEMPLATE, 
-                            CONTEXT, 
-                            'string', 
-                            ENVIRO.get('TEMPLATE_TMP_PATH'))
+            _ouput = TEMPLATE_ENGINE(pfile = TEMPLATE, 
+                            ptype = 'string',
+                            pcontext = CONTEXT, 
+                            preturn_type = 'string' 
+                            )
             return True, _output, ENVIRO, CLIENT_STATE, COOKIES, CSB 
 
     return False, '', ENVIRO, CLIENT_STATE, COOKIES, CSB
@@ -146,9 +148,9 @@ def add_comment(p_id=-1, p_user_id=-1, p_text='', p_bc_parent=None,):
                %(bc_comments)s::tsvector  ) """
     _topass = {'blog_id': p_id, 'bc_user_id':p_user_id,
                 'bc_comment': p_text}
-    return m.run_sql_command(q_str, _topass)
+    return m.run_sql_command(ENVIRO.get('CONN'),q_str, _topass)
 
-def edit_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE, CSB=''):
+def edit_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE, CSB='', TEMPLATE_STACK={}):
 
     if not m.check_credentials('blog.edit_blog', SEC.get('USER_ID',-1) ):
         return m.log_in_page()
@@ -163,7 +165,7 @@ def edit_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPL
 
     _sql = "select blog_title, blog_htmltext from blog where blog_id = %(blog_id)s;"
 
-    _rec = m.run_sql_command(_sql, {'blog_id':_key})
+    _rec = m.run_sql_command(ENVIRO.get('CONN'),_sql, {'blog_id':_key})
     if len(_rec) == 0 :
         return False, '', ENVIRO, CLIENT_STATE, COOKIES, CSB 
     CONTEXT.update({'submit_command':'save_blog',
@@ -171,23 +173,24 @@ def edit_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPL
                       'title': _rec.get('blog_title',''),
                       'content':_rec.get('blog_html','')
                     })
-    _ouput = TEMPLATE_ENGINE(TEMPLATE, 
-                            CONTEXT, 
-                            'string', 
-                            ENVIRO.get('TEMPLATE_TMP_PATH'))
+    _ouput = TEMPLATE_ENGINE(pfile =TEMPLATE, 
+                            ptype = 'string',
+                            pcontext = CONTEXT, 
+                            preturn_type = 'string')
     return True, _output, ENVIRO, CLIENT_STATE, COOKIES, CSB 
 
-def new_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE, CSB=''):
-    CONTEXT.update({'blog_id' : m.get_db_next_id("blog_blog_id_seq"),
+def new_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE, CSB='', TEMPLATE_STACK={}):
+    CONTEXT.update({'blog_id' : m.get_db_next_id(ENVIRO.get('CON'),"blog_blog_id_seq"),
                     'submit_command': 'save_blog'}
                     )
-    _ouput = TEMPLATE_ENGINE(TEMPLATE, 
-                            CONTEXT, 
-                            'string', 
-                            ENVIRO.get('TEMPLATE_TMP_PATH'))
+    _ouput = TEMPLATE_ENGINE(pfile = TEMPLATE, 
+                            ptype = 'string',
+                            pcontext = CONTEXT, 
+                            preturn_type = 'string' 
+                            )
     return True, _output, ENVIRO, CLIENT_STATE, COOKIES, CSB 
 
-def save_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE, CSB=''):
+def save_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE, CSB='', TEMPLATE_STACK={}):
     if 'blog_id' in GET :
         _key = int(''.join(GET.get('blog_id')),'-1')
         _search_tags = ''.join(GET.get('search_tags', '')).split(',')
@@ -225,14 +228,13 @@ def save_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPL
             'blog_title': _title
 
     }
-    m.run_sql_command(_sql, _topadd)
+    m.run_sql_command(ENVIRO.get('CONN'),_sql, _topadd)
     POST.update({'blogkey':_key})
     
     _is_in_cache, TEMPLATE, _template_name = build_template(papp_command, get_template_stack('view'), True)
     return view(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, {},TEMPLATE, TEMPLATE_ENGINE )
 
-
-def comment_on_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE,CSB='' ):
+def comment_on_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE,CSB='', TEMPLATE_STACK={} ):
     if 'blog_id' in GET :
         _key = int(''.join(GET.get('blog_id')),'-1')
         _search_tags = ''.join(GET.get('search_tags', '')).split(',')
@@ -264,7 +266,7 @@ def comment_on_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE,
         _is_in_cache, TEMPLATE, _template_name = build_template(papp_command, get_template_stack('view'), True)
         return view(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, {},TEMPLATE, TEMPLATE_ENGINE )
 
-def get_cats(POST, GET, ENVIRO, COOKIES, CLIENT_STATE, CONTEXT, TEMPLATE, TEMPLATE_ENGINE, CSB=''):
+def get_cats(POST, GET, ENVIRO, COOKIES, CLIENT_STATE, CONTEXT, TEMPLATE, TEMPLATE_ENGINE, CSB='', TEMPLATE_STACK={}):
     q_str= """ select  '?id=' || cat_id::text as url, cat_short as Name, 
                 cat_long || ' ' ||  coalesce(bl_count, 0)::text as LinkText
             from category 
@@ -274,23 +276,23 @@ def get_cats(POST, GET, ENVIRO, COOKIES, CLIENT_STATE, CONTEXT, TEMPLATE, TEMPLA
                     on bl_cat_id = cat_id 
     """
 
-    _rec = m.run_sql_command(q_str)
-    _cat = m.build_url_links( _rec, p_app_command='view_category')
-    CONTEXT.update({'category': _cat})
+    _rec = m.run_sql_command(ENVIRO.get('CONN'), q_str)
+    _cat = m.build_url_links( _rec, p_url_path='', p_app_command='view_category', ENVIRO=ENVIRO)
+    CONTEXT.update({'category':_cat})
     return True, CONTEXT
 
 def view_category():
     pass
 
-def get_blog_counts(p_id, CONTEXT={}):
+def get_blog_counts(p_id, CONTEXT={}, ENVIRO={}):
     q_str = """ select bc_views 
                 from blog_counter where bc_blog_id = %(id)s  """
 
-    _rec = m.run_sql_command(q_str, {'id': p_id})
-    CONTEXT.update({'web_urls':  m.build_url_links(_rec)}) 
+    _rec = m.run_sql_command(ENVIRO.get('CONN'), q_str, {'id': p_id})
+    CONTEXT.update({'web_urls':  m.build_url_links(_rec, ENVIRO=ENVIRO)}) 
     return True, CONTEXT
 
-def get_blog_view_counts(p_id, CONTEXT= {}):
+def get_blog_view_counts(p_id, CONTEXT= {}, ENVIRO={}):
     q_str = """ select blog_title as Name, 
                         blog_title || coalesce(bc_views, 0)::text as LinkText,
                         '?id='||blog_id::text as url
@@ -298,8 +300,8 @@ def get_blog_view_counts(p_id, CONTEXT= {}):
                     left join blog_counter on blog_id = bc_blog_id
                 order by blog_counter desc limit 5  """
     
-    _rec = m.run_sql_command(q_str)
-    CONTEXT.update({'web_urls':  m.build_url_links(_rec)}) 
+    _rec = m.run_sql_command(ENVIRO.get('CONN'), q_str)
+    CONTEXT.update({'web_urls':  m.build_url_links(_rec, ENVIRO=ENVIRO)}) 
     return True, CONTEXT 
 
 def up_blog_view_count(p_id=-1):

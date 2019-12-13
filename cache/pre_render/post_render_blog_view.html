@@ -6,18 +6,18 @@
 <head>
    	<!-- Java Script
    ================================================== -->
-   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5/ckeditor.js"> </script>
-  <!-- <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
-   <script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"></script>
-   <!--<script>window.jQuery || document.write('<script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"><\/script>')</script> -->
-   <script src="<TMPL_VAR name="STATIC.furlpath">/js/main.js"></script>
+   <script src="http://localhost:8080/static/js/ckeditor5/ckeditor.js"> </script>
+  <!-- <script src="http://localhost:8080/static/js/modernizr.js"> </script>-->
+   <script src="http://localhost:8080/static/js/jquery-3.4.1.js"></script>
+   <!--<script>window.jQuery || document.write('<script src="http://localhost:8080/static/js/jquery-3.4.1.js"><\/script>')</script> -->
+   <script src="http://localhost:8080/static/js/main.js"></script>
 
    <!--- Basic Page Needs
    ================================================== -->
     <meta charset="utf-8">
-	<title><TMPL_VAR name=""></title>
-	<meta name="<TMPL_VAR name="">" content="">  
-	<meta name="<TMPL_VAR name="">" content="">
+	<title>Tag Name not Found in Context</title>
+	<meta name="Tag Name not Found in Context" content="">  
+	<meta name="Tag Name not Found in Context" content="">
 
 	<!-- mobile specific metas
    ================================================== -->
@@ -25,9 +25,9 @@
 
    <!-- CSS
     ================================================== -->
-    <link rel="stylesheet" href="<TMPL_VAR name="STATIC.furlpath">/css/default.css">
-    <link rel="stylesheet" href="<TMPL_VAR name="STATIC.furlpath">/css/layout.css">  
-    <link rel="stylesheet" href="<TMPL_VAR name="STATIC.furlpath">/css/media-queries.css">    
+    <link rel="stylesheet" href="http://localhost:8080/static/css/default.css">
+    <link rel="stylesheet" href="http://localhost:8080/static/css/layout.css">  
+    <link rel="stylesheet" href="http://localhost:8080/static/css/media-queries.css">    
 
    <!-- Favicons
 	================================================== -->
@@ -43,7 +43,7 @@
    		<div class="header-content twelve columns">
 
 		      <h1 id="logo-text"><a href="/" title="">zSheep Blog</a></h1>
-				<p id="intro"><TMPL_VAR name="SITE_NAME"></p>
+				<p id="intro">zSheep Blog</p>
 		</div>			
 
 	</div>
@@ -53,7 +53,7 @@
 	   	<div class="row">    		            
 			   	<ul id="nav" class="nav">
 						<li><a href="view">Home</a></li>
-							<TMPL_IF name="SEC.USER_LOGGEDIN" value="True">
+							
 								<li class="has-children"><a href="#">User Tools</a>
 									<ul>
 										<li><a href="/new_blog">New Blog</a></li>
@@ -61,7 +61,7 @@
 										<li><a href="#"></a></li>
 									</ul>
 								</li>
-							</TMPL_IF>
+							
 	               
 	               <li><a href="demo.html">Demo</a></li>	
 	               <li><a href="archives.html">Archives</a></li>
@@ -71,11 +71,11 @@
 	                     <li><a href="single.html">Single Blog</a></li>	                     
 	                  </ul>
 					  </li>	
-					<TMPL_IF name="SEC.USER_LOGGEDIN" value="True"> 
-							<li><a href="log_out">Log out <TMPL_VAR name="SEC.DISPLAY_NAME"> </a></li>
-					<TMPL_ELSE>
+					 
+							<li><a href="log_out">Log out  </a></li>
+					
 						  <li><a href="log_in">Login</a></li>
-					</TMPL_IF>
+					
 			   	</ul> <!-- end #nav -->			   	 
 	   	</div> 
 	</nav> <!-- end #nav-wrap -->  	     
@@ -90,7 +90,7 @@
 					<header class="entry-header">
 
 						<h2 class="entry-title">
-							<TMPL_VAR name="blog.blog_title">
+							something to test                                                               
 						</h2> 				 
 						
 						<div class="entry-meta">
@@ -110,15 +110,15 @@
 				
 					<div class="entry-content-media">
 						<div class="post-thumb">
-							<img src="<TMPL_VAR name="IMAGES.furlpath">/m-farmerboy.jpg">
+							<img src="http://localhost:8080/static/images/m-farmerboy.jpg">
 						</div> 
 					</div>
 
 					<div class="entry-content">
-						<TMPL_VAR name="blog.blog_user">
-						<TMPL_VAR name="blog.blog_id">
-						<TMPL_VAR name="blog.blog_htmltext">
-						<TMPL_VAR name="blog.search_tags">						
+						Tag Name not Found in Context
+						72
+						<p>lets see here</p>
+						oh<br> joy<br> pain 						
 					</div>
 
 					<p class="tags">
@@ -139,33 +139,15 @@
 				<h3> Comments</h3>
 
 <!-- commentlist -->
-<TMPL_IF name="comments"> <!--test to see if there are comments to show -->
+ <!--test to see if there are comments to show -->
     
     <ol class="commentlist">
-        <TMPL_LOOP name="comments">
-            <li class="depth-1">
-                <div class="avatar">
-                <img width="50" height="50" class="avatar" src="<TMPL_VAR name="IMAGES.furlpath">/user-01.png" alt="">
-                </div>
-                <div class="comment-content">
-                    <div class="comment-info">
-                        <cite><TMPL_var name="bc_title"></cite>
-                    </div>
-                    <div class="comment-text"> 
-                        <p><TMPL_var name="bc_comment"> </p>
-                        <div class="comment-meta">
-                                <time class="comment-time" datetime="<TMPL_var name="bc_date"> "><TMPL_var name="bc_date">  </time>
-                                <span class="sep">/</span><a class="reply" href="#">Reply</a>
-                        </div>
-                    </div>
-                </div>
-            </li>
-        </TMPL_LOOP>
+        
         <!--
         <li class="thread-alt depth-1">
 
             <div class="avatar">
-            <img width="50" height="50" class="avatar" src="<TMPL_VAR name="IMAGES.furlpath">/user-03.png" alt="">
+            <img width="50" height="50" class="avatar" src="/user-03.png" alt="">
             </div>
 
             <div class="comment-content">
@@ -190,7 +172,7 @@
             <li class="depth-2">
 
                 <div class="avatar">
-                    <img width="50" height="50" class="avatar" src="<TMPL_VAR name="IMAGES.furlpath">/user-03.png" alt="">
+                    <img width="50" height="50" class="avatar" src="/user-03.png" alt="">
                 </div>
 
                 <div class="comment-content">
@@ -215,7 +197,7 @@
                     <li class="depth-3">
 
                         <div class="avatar">
-                        <img width="50" height="50" class="avatar" src="<TMPL_VAR name="IMAGES.furlpath">/user-03.png" alt="">
+                        <img width="50" height="50" class="avatar" src="/user-03.png" alt="">
                         </div>
 
                         <div class="comment-content">
@@ -246,14 +228,14 @@
         </li>
     -->
     </ol> <!-- Commentlist End -->
-</TMPL_IF>
+
 
 <!-- respond -->
 <div class="respond">
     <h3>Leave a Comment</h3>
     <!-- form -->
     <form name="contactForm" id="contactForm" method="post" action="">
-        <input name="blod_id" type="hidden" id="blog_id" value="<TMPL_var name="bl_id">" />
+        <input name="blod_id" type="hidden" id="blog_id" value="Tag Name not Found in Context" />
         <fieldset>
             <div class="group">
                 <label for="cName">Name <span class="required">*</span></label>
@@ -299,9 +281,17 @@
     <div class="widget widget_categories group">
         <h3>Blog Categories.</h3> 
             <ul>
-                <TMPL_LOOP name="category">
-                    <li><TMPL_VAR name="url" ></li>						
-                </TMPL_LOOP>
+                
+                    <li><a href="http://localhost:8080/view_category%3Fid%3D2">Python Code 0</a></li>						
+                
+                    <li><a href="http://localhost:8080/view_category%3Fid%3D5">Animals, gardening and other 0</a></li>						
+                
+                    <li><a href="http://localhost:8080/view_category%3Fid%3D4">On Going Work to get offgrid 0</a></li>						
+                
+                    <li><a href="http://localhost:8080/view_category%3Fid%3D1">Comments & Programs regarding Postgresql 0</a></li>						
+                
+                    <li><a href="http://localhost:8080/view_category%3Fid%3D3">Journal of throughts 0</a></li>						
+                
             </ul>
     </div>
 
@@ -323,9 +313,7 @@
         <h3>Popular Post.</h3>
 
         <ul class="link-list">
-            <TMPL_LOOP name="tops">
-                <li><a href="<TMPL_VAR name="tops_url">"><TMPL_VAR name='blog_title'></a></li>
-            </TMPL_LOOP>                   
+            Tag Name not Found in Context                   
         </ul>
             
     </div>
@@ -343,11 +331,11 @@
    
 		<!-- Java Script
    ================================================== -->
-   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5/ckeditor.js"> </script>
-  <!-- <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
-   <script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"></script>
-   <!--<script>window.jQuery || document.write('<script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"><\/script>')</script> -->
-   <script src="<TMPL_VAR name="STATIC.furlpath">/js/main.js"></script>
+   <script src="http://localhost:8080/static/js/ckeditor5/ckeditor.js"> </script>
+  <!-- <script src="http://localhost:8080/static/js/modernizr.js"> </script>-->
+   <script src="http://localhost:8080/static/js/jquery-3.4.1.js"></script>
+   <!--<script>window.jQuery || document.write('<script src="http://localhost:8080/static/js/jquery-3.4.1.js"><\/script>')</script> -->
+   <script src="http://localhost:8080/static/js/main.js"></script>
 
 
 </body>

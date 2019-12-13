@@ -1,5 +1,5 @@
 import pyUwf as m 
-import globals as g 
+import config as g 
 import session_controller as sc
 import traceback, sys, os
 
@@ -83,7 +83,7 @@ def show_errors(et='', pe=None, ENVIRO={}, TEMPLATE_ENGINE=None,
             COOKIES={}, 
             CONTEXT={},
             CSB='',
-            TEMPLATE='', 
+            TEMPLATE='', TEMPLATE_STACK={}
             ):
     
     if pe is None or not isinstance(pe, Exception):
@@ -111,14 +111,12 @@ def show_errors(et='', pe=None, ENVIRO={}, TEMPLATE_ENGINE=None,
     _context.update({'POST_LENGTH':len(_post)+1})
     _context.update({'GET_LENGTH':len(_get)+1})
     _output = TEMPLATE_ENGINE( pfile = et, 
-                    ptype = 'string'
+                    ptype = 'string',
                     pcontext =_context, 
-                    preturn_type = 'string'
+                    preturn_type = 'string',
                     pcache_path = ENVIRO.get('TEMPLATE_CACHE_PATH_POST_RENDER', os.getcwd())
                 )
     return True, _output
-
-
 
 def tb_list_of_dicts(pkey, plist):
     _rldic = []
@@ -127,11 +125,8 @@ def tb_list_of_dicts(pkey, plist):
     return _rldic
 
 def load_render_error_template(pcontext, pt):
-
     if m.build_template('error', g.TEMPLATE_STACK.get('error'), False):
-    
         _ef = g.ENVIRO['TEMPLATE_CACHE_PATH'] + 'error' + g.TEMPALATE_EXTENSION
-
         return g.TEMPLATE_ENGINE(_ef,
                 pcontext,
                 g.ENVIRO.get('TEMPLATE_TYPE', ''), 

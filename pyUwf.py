@@ -1,53 +1,62 @@
 import psycopg2, psycopg2.extras, psycopg2.errors
-import cgi, os, importlib, time
-import pyctemplate   #template engine
+import  os, importlib, time
 from urllib.parse import quote_plus, urlparse, urlencode, parse_qs
-from zlib import adler32
-import globals as g 
+
 from datetime import datetime as dt 
 from datetime import timedelta as td
 
 import mimetypes as mt 
-import apps.session_controller as session 
-session.SEC = g.SEC
+import apps.session_controller as session
+
 
 ##this is the main driving function it runs the below start up functions
 # if all are true it then searches for the app to be called then processes it
 #      
 def kick_start(enviro, start_response):
+    #from importlib import reload
+    import config as g 
+    #reload(g)
+    ENVIRO =g.get_enviro()
+    ENVIRO.update({'APPSTACK':g.APPSTACK})
+    ENVIRO.update({'SEC': g.SEC}) ##start with the basic SEC skeleton
     try :
-        if not check_paths():
+        if not check_paths(ENVIRO):
             return server_respond(pstatus='500 ', 
                 poutput='paths declared in globals.py failed', pre=None,
                 sr=start_response)
         else:
-            append_to_sys_path()
-        if not connect_to_db(pwd='123456'):
+            append_to_sys_path(ENVIRO)
+        _r, con = connect_to_db(pwd='123456')
+        ENVIRO.update({'CONN':con})
+        
+        if not _r:
             return server_respond(pstatus='500 ', 
                 poutput='Can not connect to the Database', pre=None,
                 sr=start_response)
-        _results, ENVIRO, POST, GET, CSB, APPSTACK, COOKIES, CLIENT_STATE = load_enviro(enviro, ENVIRO=g.ENVIRO, APPSTACK=g.APPSTACK)
-        _cs_results, CLIENT_STATE = session.load_session(COOKIES.get('session_id'), APPSTACK=APPSTACK, ENVIRO=ENVIRO, CLIENT_STATE=CLIENT_STATE)
-        if not _results :
-            error('Load Enviroment return false, can not continue ')
-            return server_respond(pstatus='500 ', 
-                poutput='load enviro error', pre=None, sr=start_response)
-        if not check_SSL(enviro):
+        _results, ENVIRO, POST, GET, CSB, APPSTACK, COOKIES, CLIENT_STATE = load_enviro(enviro, ENVIRO=ENVIRO, APPSTACK=g.APPSTACK, CLIENT_STATE=g.CLIENT_STATE)
+        _cs_results, CLIENT_STATE, SEC= session.load_session(COOKIES.get('session_id'), APPSTACK=APPSTACK, ENVIRO=ENVIRO, CLIENT_STATE=CLIENT_STATE)
+        ENVIRO.update({'SEC': SEC})
+        if not check_SSL(enviro, ENVIRO):
             return server_respond(pstatus='500 ', 
                 poutput='SSL Check failure', pre=None, sr=start_response)
         if ENVIRO.get('SERVE_STATIC_FILES', False) and APPSTACK is None : 
-            _results, _output = get_static_url_file(GET.get('url_path',''), False, ENVIRO=ENVIRO)
+            if ENVIRO.get('USING_WAITRESS')==True:
+                _results, _output, ENVIRO = get_static_url_file(GET.get('url_path',''), False, ENVIRO=ENVIRO, rtype='file')
+            else:
+                _results, _output, ENVIRO = get_static_url_file(GET.get('url_path',''), False, ENVIRO=ENVIRO)
             if not _results:
                 raise Exception('Could not find the requested URI')
             set_static_file_cache_header(ENVIRO=ENVIRO)
             return server_respondf(pstatus='200 ', 
                 pheaders=ENVIRO.get('HEADERS'),
                 poutput= _output,
-                sr=start_response
+                sr=start_response,
+                pserver_enviro = enviro,
+                ENVIRO=ENVIRO 
                 )
         else: 
             if CSB == '':
-                CSB = session.load_CSB(POST, GET, session.SEC)
+                CSB = session.load_CSB(POST, GET, ENVIRO)
             _test, _output, ENVIRO, CLIENT_STATE, COOKIES, CSB = run_pyapp( 
                     papp_filename=APPSTACK.get('filename',None),
                     papp_path=APPSTACK.get('path', None),
@@ -66,7 +75,9 @@ def kick_start(enviro, start_response):
                     CONTEXT={},
                     CSB=CSB,
                     TEMPLATE='', 
-                    TEMPLATE_ENGINE=g.TEMPLATE_ENGINE
+                    TEMPLATE_ENGINE=g.TEMPLATE_ENGINE,
+                    TEMPLATE_STACK = g.TEMPLATE_STACK,
+                    MEMCACHE=g.MEMCACHE
                 )
             if _test:
                 return server_respond(poutput=_output, 
@@ -87,14 +98,16 @@ def kick_start(enviro, start_response):
                 POST=POST, GET=GET, CLIENT_STATE=CLIENT_STATE, COOKIES=COOKIES, CONTEXT={},
                 CSB=CSB, TEMPLATE='')
             return server_respond(pstatus='500',
-                pheaders={'Content-type': 'text/html'},
+                pheaders={'Content-Type': 'text/html'},
+                penviro=ENVIRO,
                 poutput=_output,
                 sr=start_response)
         else: 
             raise Exception("Error Template or App Stack not setup rethrowing the error.") from _e
     return server_respond(pstatus='500 ',
         pcontext=[],
-        pheaders={'Content-type': 'text/plain'},
+        pheaders={'Content-Type': 'text/plain'},
+        penviro=ENVIRO,
         pre=None,
         poutput='Internal Server Error No Command Sent',
         sr=start_response
@@ -127,26 +140,34 @@ def error_catcher(p_AS={}, p_TS=[], pe=Exception(), ENVIRO={}, TEMPLATE_ENGINE=N
     else:
         raise Exception('The error handler is not setup correctly in the app stak or is missing ') from pe
 
-def get_static_url_file(pfull_path='', pcheck_file_only =False, ENVIRO={}):
+def get_static_url_file(pfull_path='', pcheck_file_only =False, ENVIRO={}, rtype = 'string'):
+    """
+    pcheck_file_only returns true or false if the file was found but _output is empty
+    """
     _filepath = convert_url_path_server_path(pfull_path, ENVIRO)
     _found =  os.path.isfile(_filepath)
     _output= b''
     if _found and pcheck_file_only ==False:
-        _fp = open(_filepath, 'rb')
-        _output =  _fp.read()
-        _fp.close()
+        if rtype =='string':
+            _fp = open(_filepath, 'rb')
+            _output =  _fp.read()
+            _fp.close()
+        else:
+            _output = open(_filepath, 'rb')
+        if pfull_path[-2:] =='js':
+            dd = 5
         _type, _encode = mt.guess_type(_filepath, strict=False)
         if _type is None :
             _type = 'plain/text'
-        ENVIRO.get('HEADER',{}).update({'Content-type': _type })
-    return _found, _output
+        ENVIRO.get('HEADERS',{}).update({'Content-Type': _type })
+    return _found, _output, ENVIRO
 
 def set_static_file_cache_header(pcacheability='public', pmethod='max-age', p_age=0, ENVIRO={}):
     if p_age ==0 and pmethod in ('max-age', 's-maxage', 'stale-while-revalidate', 'stale-if-error' ):
         p_age = ENVIRO.get('STATIC_FILES_CACHE_AGE', 600)
-        ENVIRO.get('HEADER',{}).update({'Cache-Control': pcacheability + ' ' + pmethod + '=' + str(p_age)} )
+        ENVIRO.get('HEADERS',{}).update({'Cache-Control': pcacheability + ' ' + pmethod + '=' + str(p_age)} )
     else:
-        ENVIRO.get('HEADER',{}).update({'Cache-Control': pcacheability })
+        ENVIRO.get('HEADERS',{}).update({'Cache-Control': pcacheability })
 
 def convert_url_path_server_path(p_upath='', ENVIRO={}):
     
@@ -185,8 +206,7 @@ def server_respond(pstatus='200',
         pcsb=''
        ):
     
-    session.save_session(CLIENT_STATE, CLIENT_STATE.get('SESSION_ID')) ## save the client state prior to sending sending data
-    
+    session.save_session(CLIENT_STATE, CLIENT_STATE.get('SESSION_ID'), ENVIRO=penviro) ## save the client state prior to sending data
     _head = list(pheaders.items()) # wsgi wants this as list 
     if len(pcookies) > 0 :
         cc =[('Set-Cookie', str(v).strip() +";" ) for k, v in pcookies.items()] #put in the cookies 
@@ -196,6 +216,7 @@ def server_respond(pstatus='200',
 
     ##add the content length just before returning wsgi module
     _head.append( ('Content-Length', str(len(_outputB))))
+    check_headers(_head) #make no headers are not text type will throw an exception
     sr(pstatus, _head)
     return [_outputB]
 
@@ -203,31 +224,51 @@ def server_respond(pstatus='200',
 def server_respondf(pstatus='200', 
         pheaders={},
         poutput=None,
-        sr = None):
-    _head = list(pheaders.items()) # wsgi wants this as list 
-    if len(poutput) == 0 :
-        poutput ==b'failed to find the file'
-        pass
-    ##add the content length just before returning wsgi module
-    for k, v in _head:
-        if not isinstance(k, str):
-            bb = 'problem'
-        if not isinstance(v, str):
-            bb = 'problem'
-    if _head is None :
-        _head =  ('Content-Length', str(len(poutput)))
+        sr = None,
+        pserver_enviro=None,
+        ENVIRO ={}):
+     #make no headers are not text type will throw an exception
+    _head = list(pheaders.items()) # wsgi wants this as a list 
+    
+    _uw = ENVIRO.get('USING_WAITRESS', False)
+    if _uw:
+        _len = os.fstat(poutput.fileno()).st_size
+        poutput.seek(0)
     else:
-        _head.append(('Content-Length', str(len(poutput))))
-    sr(pstatus, _head)
-    return [poutput]
+        _len = len(poutput)
+    if _len == 0 :
+        poutput =b'file not found'
+        _len = len(poutput)
+        _uw = False
+    ##add the content length just before returning wsgi module
+    if _head is None :
+        _head =  ('Content-Length', str(_len))
+    else:
+        _head.append(('Content-Length', str(_len) ) )
+    check_headers(_head)
+    sr(pstatus, _head) # start the responds
+    if _uw :
+        return pserver_enviro['wsgi.file_wrapper'](poutput, _len)
+    else :
+        return (output)
 
-def clear_globals():
-    g.POST = {}
-    g.ERRORSTACK = []
-    g.GET = {}
-    g.ENVIRO.update({'HEADERS':{}})
-    g.COOKIES = g.cookies.BaseCookie()
-    g.COOKES_to_Send = g.cookies.BaseCookie()
+def check_headers(phead = ()):
+     #check the headers before sending the off 
+    for k, v in phead:
+        if not isinstance(k, str):
+            _error = 'Header Entry %s is not the Type String ' % (k)
+            raise Exception (_error)
+        if not isinstance(v, str):
+            _error = 'Header Entry %s data value (%s) is not the Type String ' % (k, v)
+            raise Exception (_error)
+
+def clear_globals(POST, GET, ERRORSTACK, ENVIRO, COOKIES, COOKIES_to_Send):
+    POST = {}
+    ERRORSTACK = []
+    GET = {}
+    ENVIRO.update({'HEADERS':{}})
+    COOKIES = None
+    COOKES_to_Send = None
 
 def run_pyapp(papp_filename='', 
                 papp_path='.', 
@@ -247,7 +288,9 @@ def run_pyapp(papp_filename='',
                 CONTEXT={},
                 CSB= '',
                 TEMPLATE='', 
-                TEMPLATE_ENGINE=None
+                TEMPLATE_ENGINE=None,
+                TEMPLATE_STACK={},
+                MEMCACHE=None,
             ):
     """
     papp_filename: is the python module being dynamically imported 
@@ -277,10 +320,10 @@ def run_pyapp(papp_filename='',
 
     """
     if papp_filename == '':
-        error('No App_name passed in Failed', 'run_pyapp')
+        error('No App_name passed in Failed', 'run_pyapp', ENVIRO=ENVIRO)
         return False, ''
     ## lets see if the app is allowed to be cached if so do we have cached version to send to the client?
-    _results, _output = results_cache_is_in('post_render_'+papp_filename + "_" + papp_command + ".html", pserver_cache_age, ENVIRO)
+    _results, _output = results_cache_is_in('post_render_'+papp_filename + "_" + papp_command + ".html", pserver_cache_age, ENVIRO, MEMCACHE)
     if pserver_cache_on and _results:
         return True, _output, ENVIRO, CLIENT_STATE, COOKIES, CSB      
     
@@ -289,14 +332,16 @@ def run_pyapp(papp_filename='',
     _result = False
     
     if hasattr(_ar, papp_command) : 
-        if not session.check_credentials(papp_command, CLIENT_STATE): #check secuirty
-            _result = session.load_login_page("This function %s requires you to be logged in "%(papp_command) )
+        if not session.check_credentials(papp_command, CLIENT_STATE, ENVIRO): #check secuirty
+              _result, _raw_output, ENVIRO, CLIENT_STATE, COOKIES, CSB = session.load_login_page( POST=POST, GET=GET, 
+                plogin_message= "This function %s requires you to be logged in "%(papp_command), 
+                ENVIRO=ENVIRO, COOKIES=COOKIES, CONTEXT=CONTEXT, TEMPLATE_ENGINE=TEMPLATE_ENGINE, CSB=CSB, TEMPLATE_STACK=TEMPLATE_STACK )
         else :
             if len(TEMPLATE)==0: ##
                 _template_stack = match_template_to_app(ptemplate_stack, 
                                                     papp_command, 
                                                     papp_filename, 
-                                                    g.ENVIRO.get('TEMPALATE_EXTENSION', '.html'))
+                                                    ENVIRO.get('TEMPALATE_EXTENSION', '.html'), ENVIRO=ENVIRO, TEMPLATE_STACK=TEMPLATE_STACK)
                 _is_in_cache, TEMPLATE, _template_name = build_template(papp_command, _template_stack, True, ENVIRO=ENVIRO)
             #run the cammand being requested  
             _result, _raw_output, ENVIRO, CLIENT_STATE, COOKIES, CSB = getattr(_ar, papp_command)( POST=POST, 
@@ -307,24 +352,24 @@ def run_pyapp(papp_filename='',
                                                   CONTEXT=CONTEXT, 
                                                   TEMPLATE=TEMPLATE, 
                                                   TEMPLATE_ENGINE=TEMPLATE_ENGINE,
-                                                  CSB=CSB
-
+                                                  CSB=CSB,
+                                                  TEMPLATE_STACK=TEMPLATE_STACK
                         ) 
         if _result :
             ENVIRO.get('HEADER',{}).update({'Content-type': pcontent_type })
             if pserver_cache_on:
-                results_cache_put_in('post_render_'+papp_filename + "_" + papp_command + ".html", _raw_output, ENVIRO)
+                results_cache_put_in('post_render_'+papp_filename + "_" + papp_command + ".html", _raw_output, ENVIRO, MEMCACHE)
         
             return True, _raw_output, ENVIRO, CLIENT_STATE, COOKIES, CSB 
         
-        error('Not Critical: recieved a false state from the app ')
+        error('Not Critical: recieved a false state from the app ', ENVIRO=ENVIRO)
         return True, '', ENVIRO, CLIENT_STATE, COOKIES, CSB
     else:
-        error('Error could not find  %s command in %s '%(papp_command, papp_filename), '')    
+        error('Error could not find  %s command in %s '%(papp_command, papp_filename), '' , ENVIRO=ENVIRO)    
 
     return False, '',  ENVIRO, CLIENT_STATE, COOKIES, CSB
 
-def match_template_to_app(ptemplate_stack_name, papp_command, papp_filename, p_template_extension='.html'):
+def match_template_to_app(ptemplate_stack_name, papp_command, papp_filename, p_template_extension='.html', ENVIRO={}, TEMPLATE_STACK={}):
     """
     Searches through the TemplateStack using the passed template name if that fails
     it will then use the app_command then the name of the python file where app is stored  
@@ -335,23 +380,23 @@ def match_template_to_app(ptemplate_stack_name, papp_command, papp_filename, p_t
     ## try to find the template  in the global template_stack dictionary
     #error( 'var pass = %s'% (ptemplate_stack), 'what value is passed into ptemplate_stacks')
 
-    if ptemplate_stack_name in g.TEMPLATE_STACK:
-        to_render = g.TEMPLATE_STACK.get(ptemplate_stack_name, None)
+    if ptemplate_stack_name in TEMPLATE_STACK:
+        to_render = TEMPLATE_STACK.get(ptemplate_stack_name, None)
         if to_render is None:
-            error("failed to render a template for %s" % (ptemplate_stack_name), 'use template stack')
+            error("failed to render a template for %s" % (ptemplate_stack_name), 'use template stack',  ENVIRO=ENVIRO)
     ## try to use the app name to find the template 
-    elif papp_command in g.TEMPLATE_STACK:
-        to_render = g.TEMPLATE_STACK.get(papp_command, None)
+    elif papp_command in TEMPLATE_STACK:
+        to_render = TEMPLATE_STACK.get(papp_command, None)
         if to_render is None: 
-            error("failed to render a template for %s" % (papp_filename) , 'use app name')
+            error("failed to render a template for %s" % (papp_filename) , 'use app name' , ENVIRO=ENVIRO)
     ## try to find the template based on the python file itself 
-    elif papp_filename in g.TEMPLATE_STACK:
-        to_render = g.TEMPLATE_STACK.get(papp_filename, None)
+    elif papp_filename in TEMPLATE_STACK:
+        to_render = TEMPLATE_STACK.get(papp_filename, None)
         if to_render is None:
-            error("failed to render a template for %s" %(papp_filename), 'use file name')
+            error("failed to render a template for %s" %(papp_filename), 'use file name' , ENVIRO=ENVIRO)
     else:
         to_render = None
-        error("No Template Defined for %s " % ( papp_filename ), 'run_pyapp')
+        error("No Template Defined for %s " % ( papp_filename ), 'run_pyapp' , ENVIRO=ENVIRO)
     return to_render
 
 def add_to_Context(CONTEXT={}, 
@@ -373,11 +418,12 @@ def add_to_Context(CONTEXT={},
     CONTEXT.update({'STATIC':ENVIRO.get('STATIC','')})
     CONTEXT.update({'MEDIA':ENVIRO.get('MEDIA','')})
     CONTEXT.update({'SITE_NAME':ENVIRO.get('SITE_NAME','NOT SET')})
-    CONTEXT.update({'APPURL':ENVIRO['PROTOCOL'] + g.ENVIRO.get('HTTP_HOST')+ '/' + g.ENVIRO.get('SCRIPT_NAME','')} )
+    CONTEXT.update({'APPURL':ENVIRO['PROTOCOL'] + ENVIRO.get('HTTP_HOST')+ '/' + ENVIRO.get('SCRIPT_NAME','')} )
     CONTEXT.update({'CSB':CSB})
     CONTEXT.update({'COOKIES':COOKIES})
     CONTEXT.update({'GET':GET})
     CONTEXT.update({'POST':POST})
+    CONTEXT.update({'SEC':ENVIRO.get('SEC',{})})
     return CONTEXT
         
 def match_uri_to_app(puri='', APPSTACK={}, ENVIRO={} ):
@@ -404,15 +450,15 @@ def match_uri_to_app(puri='', APPSTACK={}, ENVIRO={} ):
     # uri global varaible 
     for _parts in reversed(puri.split('/')) :
         if _parts in APPSTACK :
-            return True, g.APPSTACK.get(_parts)
+            return True, APPSTACK.get(_parts)
     ## exhausted all matches going to the root
     if convert_url_path_server_path(puri, ENVIRO) == "":
         if '/' in APPSTACK:
             return True, APPSTACK.get('/', {})
     return False, None
         
-def check_app_in_appstack():
-    if g.ENVIRO['PYAPP_TO_RUN'] in g.APPSTACK.keys():
+def check_app_in_appstack(ENVIRO={}, APPSTACK={}):
+    if ENVIRO['PYAPP_TO_RUN'] in APPSTACK.keys():
         return True
     return False
 
@@ -442,7 +488,7 @@ def build_template(papp_name='', ptstack=[], p_check_components=True, p_template
     _path = ENVIRO.get('TEMPLATE_PATH', '')
     for  _i in  ptstack: 
         _fp = _path+_i 
-        _rstring = '<TEMPLATE name="%s"/>' % (_i)
+        _rstring = '<TMPL_INCLUDE name="%s"/>' % (_i)
         if os.path.isfile(_fp):
             _tp = open(_fp, 'r')
             _tp.seek(0)
@@ -454,11 +500,8 @@ def build_template(papp_name='', ptstack=[], p_check_components=True, p_template
             else :
                 _bts = _bts.replace(_rstring, _tp.read())
         else:
-            error('Failed to find the template %s for app %s' %(_i, papp_name), 'build template')
+            error('Failed to find the template %s for app %s' %(_i, papp_name), 'build template',  ENVIRO=ENVIRO)
     return (template_cache_put_in(_template_name , _bts, ENVIRO), _bts, _template_name)
-
-def get_template_stack(pkey):
-    g.TEMPLATE_STACK.get(pkey, [])
 
 def template_age_vs_parts_age(p_rendered_template='', ptstack={}, ENVIRO={} ):
     """ Compares the age of an allready rendered template to the component parts of the template 
@@ -524,25 +567,25 @@ def template_cache_get(pkey_value, preturn_type='string', pmode='r', ENVIRO={}, 
 
     return None
 
-def results_cache_put_in(key_value, content, ENVIRO={}):
+def results_cache_put_in(key_value, content, ENVIRO={}, MEMCACHE=None):
     """ this holds the results for previous runs of an app. 
     """
     if ENVIRO.get('MEMCACHE_USE', False):
-        g.MEMCACHE.set(key_value, content) ##this will need more work to probably have to use pickle
+        MEMCACHE.set(key_value, content) ##this will need more work to probably have to use pickle
     path = ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER','')
     cfile = open(path+key_value, 'w', encoding='utf-8')
     cfile.write(content)
     cfile.close()
     return True
 
-def results_cache_is_in(pkey_value, p_age, ENVIRO={}): 
+def results_cache_is_in(pkey_value, p_age, ENVIRO={}, MEMCACHE=None): 
     """returns true if the cached file is found  and the age is less than p_age
     """
     _path = ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER','')
     if ENVIRO.get('MEMCACHE_USE', False):
-        if pkey_value not in g.MEMCACHE:
+        if pkey_value not in MEMCACHE:
             return False, ''
-        return True , g.MEMCACHE.get(pkey_value)
+        return True , MEMCACHE.get(pkey_value)
     elif os.path.isfile(_path+pkey_value):
         fpath =  _path + pkey_value 
         age = dt.fromtimestamp(os.path.getmtime(fpath)) + td(seconds=p_age)
@@ -572,31 +615,31 @@ def load_enviro(e, ENVIRO={}, POST={}, GET={}, CSB='', APPSTACK={}, CLIENT_STATE
         ENVIRO.update({'URI_PATH':bytes_to_text(e.get('REQUEST_URI'))})
 
     if not change_base_url( bytes_to_text(e.get('HTTP_HOST', '') )
-                        , bytes_to_text(e.get('SERVER_PORT') )):
+                        , bytes_to_text(e.get('SERVER_PORT') ), ENVIRO=ENVIRO):
         return False,ENVIRO, POST, GET, CSB, APPSTACK
 
     ENVIRO.update({'PROTOCOL': identify_protocol(e.get('SERVER_PROTOCOL','http://'))})
 
-    ENVIRO['STATIC']['furlpath']= build_url_root_path() + g.ENVIRO['STATIC']['urlpath']
-    ENVIRO['IMAGES']['furlpath']= build_url_root_path() + g.ENVIRO['IMAGES']['urlpath']
-    ENVIRO['DOCS']['furlpath']= build_url_root_path() + g.ENVIRO['DOCS']['urlpath']
-    ENVIRO['MEDIA']['furlpath']=build_url_root_path() + g.ENVIRO['MEDIA']['urlpath']
+    ENVIRO['STATIC']['furlpath']= build_url_root_path(ENVIRO=ENVIRO) + ENVIRO['STATIC']['urlpath']
+    ENVIRO['IMAGES']['furlpath']= build_url_root_path(ENVIRO=ENVIRO) + ENVIRO['IMAGES']['urlpath']
+    ENVIRO['DOCS']['furlpath']= build_url_root_path(ENVIRO=ENVIRO) + ENVIRO['DOCS']['urlpath']
+    ENVIRO['MEDIA']['furlpath']=build_url_root_path(ENVIRO=ENVIRO) + ENVIRO['MEDIA']['urlpath']
     
-    CLIENT_STATE = g.CLIENT_STATE
+    CLIENT_STATE = CLIENT_STATE
     #Load Parse and Process the POST and GET commands
     
     if e.get('REQUEST_METHOD').upper() == 'POST':
-        _result, POST, CSB = parse_POST(e)
+        _result, POST, CSB = parse_POST(e, ENVIRO=ENVIRO)
         _result, APPSTACK = match_uri_to_app(ENVIRO.get('URI_PATH'), APPSTACK, ENVIRO)
         _result, COOKIES = session.load_cookies(e.get('HTTP_COOKIE'))
     elif e.get('REQUEST_METHOD').upper() == 'GET':
-        _result, GET, CSB =parse_GET(e)
+        _result, GET, CSB =parse_GET(e, ENVIRO=ENVIRO)
         _result, APPSTACK = match_uri_to_app(ENVIRO.get('URI_PATH'), APPSTACK, ENVIRO) # find the python applicaiton to run 
-        _result, COOKIES =session.load_cookies(e.get('HTTP_COOKIE')) # load the cookies sent and may load a save session state 
+        _cr, COOKIES =session.load_cookies(e.get('HTTP_COOKIE')) # load the cookies sent and load a saved session state latter
     
     return _result, ENVIRO, POST, GET, CSB, APPSTACK, COOKIES, CLIENT_STATE
 
-def parse_POST(web_enviro, POST={}, CSB=''):
+def parse_POST(web_enviro, POST={}, CSB='', ENVIRO={}):
     script = ( web_enviro.get('REQUEST_URI', '').encode('iso-8859-1').decode(errors='replace') or
             web_enviro.get('SCRIPT_NAME', '').encode('iso-8859-1').decode(errors='replace') or 
             web_enviro.get('REDIRECT_URL', '').encode('iso-8859-1').decode(errors='replace')
@@ -616,22 +659,28 @@ def parse_POST(web_enviro, POST={}, CSB=''):
     POST.update({'CONTENT_TYPE': web_enviro.get('CONTENT_TYPE')})
     return True, POST, CSB
 
-def parse_GET(web_enviro, GET={}, CSB=''):
-    _url = bytes_to_text(web_enviro.get('REQUEST_URI', b''))
-    GET.update({"PATH_TO_APP":bytes_to_text(web_enviro.get('mod_wsgi.path_info','')) })
-    GET.update({'SCRIPT_ROOT':bytes_to_text(web_enviro.get('mod_wsgi.script_name',''))})
+def parse_GET(web_enviro, GET={}, CSB='', ENVIRO={}):
+    if 'REQUEST_URI' in web_enviro :
+        _url = bytes_to_text(web_enviro.get('REQUEST_URI', b''))
+    elif 'PATH_INFO' in web_enviro :
+        _url = bytes_to_text(web_enviro.get('PATH_INFO', b''))
+    elif 'mod_wsgi.path_info' in web_enviro :    
+        GET.update({"PATH_TO_APP":bytes_to_text(web_enviro.get('mod_wsgi.path_info','')) })
+    elif 'mod_wsgi.script_name' in  web_enviro:
+        GET.update({'SCRIPT_ROOT':bytes_to_text(web_enviro.get('mod_wsgi.script_name',''))})
     if _url is None:
         return True
     else :
         script = ( _url.encode('iso-8859-1').decode(errors='replace') or 
-                    _url.encode('iso-8859-1').decode(errors='replace')
+                   _url.encode('utf-8').decode(errors='replace') or
+                   _url.encode('utf-8').decode(errors='replace')
                 )      
     GET.update({'url_path': script})
     qs = web_enviro.get('QUERY_STRING', '')
     GET.update({'QUERY_STRING_COUNT':0})
     if isinstance(qs, bytes): ##url encoded data typically ascii
         try:
-            qs = parse_qs(qs.decode(g.ENVIRO.get('ENCODING', 'utf-8')))
+            qs = parse_qs(qs.decode(ENVIRO.get('ENCODING', 'utf-8')))
         except UnicodeDecodeError:
             # ... but some user agents are misbehaving :-(
             qs = parse_qs(qs.decode('iso-8859-1'))
@@ -653,7 +702,7 @@ def sanitize_input(p_input):
 def sanitize_html(p_input):
     pass
     
-def bytes_to_text(_p, encode=g.ENVIRO.get('ENCODING', 'utf-8')):
+def bytes_to_text(_p, encode='utf-8'):
     if isinstance(_p, bytes):
        return str(_p, encode, 'replace')
     return _p
@@ -666,25 +715,17 @@ def connect_to_db(host='127.0.0.1',
                     driver='Postgresql',
                     named_for_connection='' ):
     
-    if len(named_for_connection) == 0:
-        conname = 'PG' + str(len(g.CONN)+1)
-    else:
-        conname = named_for_connection
     if driver == 'Postgresql':       
-        g.CONN.update({ conname :
-                psycopg2.connect( host=host, dbname=db, user=user, 
-                password=pwd, port=port )
-            })
+        return True, psycopg2.connect( host=host, dbname=db, user=user, password=pwd, port=port )
     return True    
 
 def get_db_connection(connection_name = 'PG1'): #either the index or named connection
-    return g.CONN.get(connection_name)
+    return CONN.get(connection_name)
 
-def run_sql_command(p_sql, p_topass= None):
-    _con = g.CONN.get('PG1',None)
-    if _con is None:
-        return {}
-    _cur = _con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) 
+def run_sql_command(CONN = None, p_sql='', p_topass= None):
+    if CONN is None:
+        raise Exception('No Database Connection passed in ')
+    _cur = CONN.cursor(cursor_factory=psycopg2.extras.RealDictCursor) 
     try :
         _cur.execute(p_sql, p_topass)
     except psycopg2.ProgrammingError as e :
@@ -695,7 +736,7 @@ def run_sql_command(p_sql, p_topass= None):
         caused the following error %(error)s 
         parameters= %(parameters)s
         Exception Call Stack """ % {'command':p_sql, 'error':_db_error, 'parameters':str(p_topass)}   
-        _con.rollback()
+        CONN.rollback()
         raise Exception(_error_mess) from e 
     except Exception as e:  #yes this is a generic catch but there are hundreds of different possible execptions declared in pyscopg2 class 
         import traceback as tb 
@@ -705,29 +746,21 @@ def run_sql_command(p_sql, p_topass= None):
         _error_mess = """SQL ERROR the last command sent ' %(command)s
         caused the following error %(error)s 
         Exception Call Stack """ % {'command':_last_command, 'error':_db_error}   
-        _con.rollback()
+        CONN.rollback()
         raise Exception(_error_mess) from e 
     try:
         _return = _cur.fetchall()
-        _con.commit()
+        CONN.commit()
         return _return
     except psycopg2.ProgrammingError : ##this is annoying can not call any fetches with zero results as it throws this exception 
-       return {'state': _con.commit() }
+       return {'state': CONN.commit() }
 
 def create_template_engine():
-    # test to see if the template has been create if not
-    # import the default engine and put it in here
-    if g.TEMPLATE_ENGINE:
-        #from pyctemplate import compile_template  #template engine
-        from python_html_parser import render_html
-        g.TEMP_ENGINE=render_html
-    return True
+    from python_html_parser import render_html
+    return ender_html
 
-def get_template_engine():
-    return g.TEMP_ENGINE
-
-def check_SSL(e):
-    if session.SEC['SSL_REQUIRE']:
+def check_SSL(e, ENVIRO):
+    if ENVIRO.get('SEC').get('SSL_REQUIRE'):
         if e.get('HTTPS', 'off') in ('on', '1'):
             return client_redirect('/ssl_requried', 
                 '307 Temporary Redirect', b'')       
@@ -739,23 +772,24 @@ def log_event(mess, level='DEBUG'):
 
 def error(pmessage =' not set ', psource='unkown', 
             plog='ERROR', 
-            preturn_to_client=g.ENVIRO['ERROR_RETURN_CLIENT']):
-    if g.ENVIRO['LOG_LEVEL'] == 'DEBUG': #log everything
-        g.ERRORSTACK.append([
+            preturn_to_client=False,
+            ENVIRO={}, ERRORSTACK={}):
+    if ENVIRO['LOG_LEVEL'] == 'DEBUG': #log everything
+        ERRORSTACK.append([
             (" Source: %s" % (psource)),
             (" Message: %s" % (pmessage))
          ])
         return True
     elif (plog == 'WARNING'  or plog == 'ERROR') \
-            and g.ENVIRO['LOG_LEVEL'] == 'WARNING':
-        g.ERRORSTACK.append([
+            and ENVIRO['LOG_LEVEL'] == 'WARNING':
+        ERRORSTACK.append([
             (" Source: %s"% (psource)),
             (" Message: %s" % (pmessage))
          ])
         return True
     elif plog == 'ERROR' \
-            and g.ENVIRO['LOG_LEVEL'] == 'ERROR':
-        g.ERRORSTACK.append([
+            and ENVIRO['LOG_LEVEL'] == 'ERROR':
+        ERRORSTACK.append([
             (" Source: %s"% (psource)),
             (" Message: %s"% (pmessage))
          ])
@@ -806,19 +840,25 @@ def break_apart_dic(pdic={}, p_prefix='', html_start= '', html_end= '', html_sta
         _output =  '%s</TMPL_LOOP> %s %s' %(_output, html_end_loop, chr(10) )
     return _output 
 
-def build_html_template(phtml_header={}, pinclude_templates={},  pdic={} ):
+def build_html_template(pfilename='',phtml_header={}, pinclude_templates={},  pdic={}, pfunc={} ):
+    pass
+    """ TODO a functino that takes dicitionaries of headers, templates  context and function, 
+    then writes out all the TMPL_VAR's and TEMPL Loops and the associated VARS, and 
+    the FUNCTIONs it just a time saver so one can start pasting in other HTML """
+
+def build_skelton_function_file(pfilename='', template_name='',  entry_point=''):
     pass
 
-def build_url_root_path():
+def build_url_root_path(ENVIRO={}):
     """builds the current root URL path http(s)://server(:port)/
     returns string"""
-    _path = g.ENVIRO.get('PROTOCOL') + g.ENVIRO.get('HTTP_HOST')
-    if  str(g.ENVIRO.get('SERVER_PORT', 80)) != '80':
-        _path += ':'+ g.ENVIRO.get('SERVER_PORT')
+    _path = ENVIRO.get('PROTOCOL') + ENVIRO.get('HTTP_HOST')
+    if  str(ENVIRO.get('SERVER_PORT', 80)) != '80':
+        _path += ':'+ ENVIRO.get('SERVER_PORT')
     return _path 
 
 def build_url_links(p_descrip_command={}, p_url_path=None, 
-                p_app_command=None, p_protocol=None, p_host=None, p_port=None):
+                p_app_command=None, p_protocol=None, p_host=None, p_port=None, ENVIRO={}):
     
     """creates url(s) from dictionary
     p_descrip_command is dictionary looking for key values  containing the 
@@ -830,38 +870,44 @@ def build_url_links(p_descrip_command={}, p_url_path=None,
     p_app_command: default will use the current app being processed by the application stack  
     p_host: default is the passed in host name from webserver enviroment
     p_port: default is the passed in port from the webserver enviroment
-    returns: a disction  
+    returns: list of dictionaries 
+    Name: of the url
+    Link Text:   
+    URL: the full url constructed <a href="url" >LinkText</a>   
     """
     if len(p_descrip_command) ==0:
         return None
     if p_protocol is None:
-        p_protocol = g.ENVIRO.get('PROTOCOL')
+        p_protocol = ENVIRO.get('PROTOCOL')
     if p_port is None:
-        if str(p_port) == '80' and  str(g.ENVIRO.get('SERVER_PORT')) == '80':
+        if str(p_port) == '80' and  str(ENVIRO.get('SERVER_PORT')) == '80':
             p_port =  ''
         else :
-            p_port = ':%s'%g.ENVIRO.get('SERVER_PORT')
+            p_port = ':%s'%ENVIRO.get('SERVER_PORT')
     else:
         p_port = ':%s'%p_port
     if p_host is None:
-        p_host = g.ENVIRO.get('HTTP_HOST')  
+        p_host = ENVIRO.get('HTTP_HOST')
+    _urlroot = p_protocol+p_host + p_port
+    if _urlroot[-1] != '/':
+            _urlroot = _urlroot + '/'   
     if p_url_path is None:
-        p_url_path =  g.ENVIRO.get('URI_PATH') +'/'
-    if p_app_command is None:
+        p_url_path = ENVIRO.get('URI_PATH')
+        if p_url_path[-1] != '/' and p_url_path != '':
+            p_url_path = p_url_path + '/'
+    if p_app_command is None or p_app_command == '':
         p_app_command = ''
-    else :
-        p_app_command += p_app_command + '/'
-    r_urls = {}
+    r_urls = []
     for bl in p_descrip_command :
-        _link = p_protocol+p_host + p_port + p_url_path + p_app_command, quote_plus(bl['url'])
+        _link = _urlroot + p_url_path + p_app_command+ quote_plus(bl['url'])
         _url_string = """<a href="%s">%s</a>""" %(_link, bl['linktext'])
-        r_urls.update( {bl['name']:_url_string})
+        r_urls.append( { 'name': bl['name'], 'linktext':bl['linktext'],  'url':_url_string })
 
     return r_urls 
 
-def get_db_next_id(p_sequence_name='', p_con=None ):
+def get_db_next_id(p_con=None, p_sequence_name=''  ):
     if p_con is None:
-        p_con = get_db_connection()
+        raise Exception(' no database connection passed ')
     q_str = """ select nextval(%(p_sequence_name)s) as key_id """
     cur = p_con.cursor()
     cur.execute(q_str, {'p_sequence_name':p_sequence_name} )
@@ -915,8 +961,13 @@ def create_access_list_from_py(p_pythonFile='', p_con=None):
             )
     return 
 
-def add_to_security(p_id, p_sec_type, p_app_name, p_app_function, p_allowed=False ):
-    pass
+def add_to_security(p_id=-1, p_sec_type='user', 
+                p_app_name='name of the app in the app stack', 
+                p_app_function = 'function to be called', p_allowed=False ):
+    
+    if p_id == -1: # in insert mode:
+        
+    
 
 def create_access_list_from_app( p_app_stack={}, p_con=None):
     if p_app_stack == '' and p_con is None:
@@ -949,7 +1000,7 @@ def create_access_list_from_app( p_app_stack={}, p_con=None):
 
 def create_default_users_grp(p_con):
     if p_con is None:
-        p_con = get_db_connection()
+        raise Exception(' no database connection passed ')
 
     q_str = """
         insert into users ( 
@@ -978,60 +1029,69 @@ def create_default_users_grp(p_con):
     cur.execute(q_str)
     p_con.commit()
 
-def check_paths():
+def check_paths(ENVIRO={}):
     """goes over the file paths defined in the globals file 
     making sure they exists
     """
     try :
-        if not os.path.exists(g.ENVIRO.get('TEMPLATE_PATH')):
-            os.makedirs(g.ENVIRO.get('TEMPLATE_PATH'), 0o755)
+        if not os.path.exists(ENVIRO.get('TEMPLATE_PATH')):
+            os.makedirs(ENVIRO.get('TEMPLATE_PATH'), 0o755)
             
-        if not os.path.exists(g.ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER')):
-            os.makedirs(g.ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER'), 0o755)
+        if not os.path.exists(ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER')):
+            os.makedirs(ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER'), 0o755)
         
-        if not os.path.exists(g.ENVIRO.get('TEMPLATE_CACHE_PATH_POST_RENDER')):
-            os.makedirs(g.ENVIRO.get('TEMPLATE_CACHE_PATH_POST_RENDER'), 0o755)
+        if not os.path.exists(ENVIRO.get('TEMPLATE_CACHE_PATH_POST_RENDER')):
+            os.makedirs(ENVIRO.get('TEMPLATE_CACHE_PATH_POST_RENDER'), 0o755)
 
-        if not os.path.exists(g.ENVIRO.get('MEDIA').get('filepath')):
-            os.makedirs(g.ENVIRO.get('MEDIA').get('filepath'), 0o755)
+        if not os.path.exists(ENVIRO.get('MEDIA').get('filepath')):
+            os.makedirs(ENVIRO.get('MEDIA').get('filepath'), 0o755)
         
-        if not os.path.exists(g.ENVIRO.get('STATIC').get('filepath')):
-            os.makedirs(g.ENVIRO.get('STATIC').get('filepath'), 0o755)
+        if not os.path.exists(ENVIRO.get('STATIC').get('filepath')):
+            os.makedirs(ENVIRO.get('STATIC').get('filepath'), 0o755)
         
-        if not os.path.exists(g.ENVIRO.get('IMAGES').get('filepath')):
-            os.makedirs(g.ENVIRO.get('IMAGES').get('filepath'), 0o755)
+        if not os.path.exists(ENVIRO.get('IMAGES').get('filepath')):
+            os.makedirs(ENVIRO.get('IMAGES').get('filepath'), 0o755)
         
-        for _p in g.APPS_PATH:
+        for _p in ENVIRO.get('APPS_PATH'):
             if not os.path.exists(_p):
                 os.makedirs(_p, 0o755)
     except OSError as e:
-        error(str(e), 'check_paths_function')
+        error(str(e), 'check_paths_function', ENVIRO)
         return False
 
     return True
 
-def append_to_sys_path():
+def append_to_sys_path(ENVIRO={}):
     from sys import path
-    for _p in g.APPS_PATH:
-        path.append(_p)
 
-def change_base_url(pchange_to='', pport=80):
+    for _p in ENVIRO.get('APPS_PATH'):
+        path.append(_p)
+    
+    path.append(ENVIRO['DOCS'].get('filepath', ''))
+    path.append(ENVIRO['MEDIA'].get('filepath', ''))
+    path.append(ENVIRO['STATIC'].get('filepath', ''))
+    path.append(ENVIRO['IMAGES'].get('filepath', ''))
+    path.append(ENVIRO['TEMPLATE_PATH'])
+    path.append(ENVIRO['TEMPLATE_CACHE_PATH_PRE_RENDER'])
+    path.append(ENVIRO['TEMPLATE_CACHE_PATH_POST_RENDER'])
+    
+def change_base_url(pchange_to='', pport=80, ENVIRO={}):
     
     #does the host protocol contain the port number some webservers have the port number in the http_host_name 
     have_port =pchange_to.find(':')
     if have_port>0:
         pchange_to = pchange_to[0:have_port] 
-    if pchange_to not in g.ALLOWED_HOST_NAMES :
-        error('Can Not change BASE URL not list in the allowed host')
+    if pchange_to not in ENVIRO.get('ALLOWED_HOST_NAMES','') :
+        error('Can Not change BASE URL not list in the allowed host', ENVIRO=ENVIRO)
         return False
     if pchange_to is not None:
         if pport == 80:
-            g.ENVIRO.update({'HTTP_HOST': pchange_to} )
+            ENVIRO.update({'HTTP_HOST': pchange_to} )
             return True
         else:
-            g.ENVIRO.update({'HTTP_HOST': pchange_to})
-            g.ENVIRO.update({'SERVER_PORT' : str(pport)})
-            return True
+            ENVIRO.update({'HTTP_HOST': pchange_to})
+            ENVIRO.update({'SERVER_PORT' : str(pport)})
+            return True, ENVIRO
     return False
 
 def identify_protocol (p_protocol):
@@ -1044,7 +1104,7 @@ def identify_protocol (p_protocol):
     dd = ''
     dd.find(':')
 
-def add_to_APPSTACK(app_function_name, 
+def create_APP_STACK_ENTRY(app_function_name, 
             template_stack,
             filename, 
             path,
@@ -1058,7 +1118,7 @@ def add_to_APPSTACK(app_function_name,
     """ todo need to at data sanity checks all these values before adding them to the appstack 
     """
 
-    g.APPSTACK.update({app_function_name:
+    {app_function_name:
         {'template_stack':template_stack,
          'filename': filename, 
          'path':path,
@@ -1069,14 +1129,7 @@ def add_to_APPSTACK(app_function_name,
          'server_cache_age':server_cache_age,
          'cacheability':cacheability,
          'cache_age':cache_age}
-        }
-        )
-
-def get_APPSTACK():
-    return g.APPSTACK
-
-def add_to_TEMPLATE_STACK():
-    pass
+    }
 
 def check_dict_for_list(pdict={}):
     _return={}
@@ -1103,5 +1156,5 @@ def convert_list_to_list_of_dict(plist=[], key_value='converted.' ):
             _return_list_dict.append({key_value+str(_count):il})
         _count = _count + 1
     return _return_list_dict
-#print(break_apart_dic(g.APPSTACK, '' ))
+
  

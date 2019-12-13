@@ -6,9 +6,9 @@ from datetime import datetime, timedelta
 
 
 APPSTACK={} ## disctionary of python files and commands to return html file
-global CONN ## connections to database servers
+CONN = None ## connections to database servers
 SEC = {} ## user and password and parts of the website  a user is allowed to
-global TEMP_ENGINE ##create the temp engine once then access it here
+TEMP_ENGINE = None  ##create the temp engine once then access it here
 ENVIRO = {} ##global server enviroment
 HEADERS ={} ##header recorders also contains the cookies
 OUTPUT = '' ##BUFFER in string its converted to bytes just prior to be sent back to mod_wsgi
@@ -34,9 +34,9 @@ CONTEXT = {} #location where to stick objects and variables that are latter pass
 MEMCACHE = {} ## in memory cache templates, files, images, query results  
 STATUS = {} ##HTML STATUS  when setting manually do not for get a space after then number
 ERRORSTACK  = {} ## stack of none fatal errors/warrings that have been created
-global ERRORSSHOW
+ERRORSSHOW = False
 ##seconds in the future until a cookie expires  
-global APPS_PATH  ## list of directories to append to the python sys path to find source files
+
 CSB = '' ##cross script block uuid must be added to all the forms and is checked during load enviro, 
             ## is save in user enviroment. it is reset after every request so single use only. 
 HTTP_REDIRECT = '' # variable to hold the url to redirect the client to.  
@@ -47,19 +47,19 @@ HTTP_REDIRECT = None
 base_directory = '/home/MAGWERKS.COM/justin/github/pyUweb/'
 #base_directory = '/home/justin/git_hub/pyUweb/'
 
-APPS_PATH = [base_directory+'apps']
+
 
 SEC={
     'REQUIRE_LOGGIN':False,
     'SSL_REQUIRE':False,
     'USER_LOGGEDIN':False,
     'USER_AUTOLOGIN':True,
-    'USER_ID': '',
+    'USER_ID': -1,
     'USER_NAME':'',
     'USER_EMAIL':'',
     'USER_PWD':'',
     'USER_IPADDRESS':'',
-    'USER_CLIENT':'',
+    'USER_CLIENT':'0.0.0.0',
     'USER_ACCESS':[{'app_name_function':True,}],
     'USER_GROUP':[{'group_name': True}],
     'USER_TIMER':60000,
@@ -72,8 +72,8 @@ CLIENT_STATE = {
         'TIMEOUT':datetime.utcnow() + timedelta(seconds=SEC['USER_TIMER']),
         'session_id':'',
         }
-
-ENVIRO={
+def get_enviro():
+    return {
     'DOCS':{'urlpath':'/documents', 'filepath':base_directory+'static/documents/', 'furlpath':''},
     'LOG_LEVEL': 'DEBUG',
     'ENCODING':'utf-8',
@@ -105,32 +105,33 @@ ENVIRO={
         'Content-Type':'text/html;',
         'charset':'UTF-8',
         },
-}
+    'ALLOWED_HOST_NAMES': ['localhost', '127.0.0.1', 'g-server', '192.168.1.72'],
+    'APPS_PATH':(base_directory+'apps',),
+    'USING_WAITRESS':True
+    }
+
 ERRORSTACK =[]
 ERRORSSHOW = True
 
-ALLOWED_HOST_NAMES= ['localhost', '127.0.0.1', 'g-server', '192.168.1.72']
 
 
+"""
 if ENVIRO['MEMCACHE_USE']:
     from pymemcache.client import mem
     MEMCACHE = mem.Client(('localhost', 11211))
-
+"""
 import sys
-sys.path.append('/home/MAGWERKS.COM/justin/github/ptyhon_HTE/' )
+sys.path.append('/home/MAGWERKS.COM/justin/github/ptython_HTE/')
 #_loca = importlib.util.spec_from_file_location('python_html_parser', '../ptyhon_HTE/')
-from python_html_parser import render_html  #default template engine
+import python_html_parser  #default template engine
 
-TEMPLATE_ENGINE = render_html  #map the function to this global 
+TEMPLATE_ENGINE = python_html_parser.render_html  #map the function to this global 
 TEMPLATE_TO_RENDER = '' ##
 ##from APPS_PATH.sanitizers as sans
 ##INPUT_SANITIZER = sans.
 ##HTML_SANITIZER =    
 
 CONN={}
-
-
-
 
 """APPSTACK layout and logic
  mapping app name and app function to physical/relative path 

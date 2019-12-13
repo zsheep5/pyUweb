@@ -18,7 +18,7 @@
         <h3>Blog Categories.</h3> 
             <ul>
                 <TMPL_LOOP name="category">
-                    <li><a href="<TMPL_VAR name="cat_url">" title=""><TMPL_VAR name="cat_name"></a>(<TMPL_VAR name="cat_count">) </li>						
+                    <li><TMPL_VAR name="url" ></li>						
                 </TMPL_LOOP>
             </ul>
     </div>
@@ -41,9 +41,9 @@
         <h3>Popular Post.</h3>
 
         <ul class="link-list">
-            <TMPL_loop name="tops">
+            <TMPL_LOOP name="tops">
                 <li><a href="<TMPL_VAR name="tops_url">"><TMPL_VAR name='blog_title'></a></li>
-            </TMPL_loop>                   
+            </TMPL_LOOP>                   
         </ul>
             
     </div>

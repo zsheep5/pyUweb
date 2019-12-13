@@ -11,8 +11,9 @@ path.append('/home/MAGWERKS.COM/justin/github/pyUweb/')
 #path.append('/home/justin/git_hub/pyUweb/')
 
 import importlib
-import wsgiserver
-from globals import APPSTACK as _as
+#import wsgiserver
+from  waitress import serve
+from config import APPSTACK as _as
 
 
 def parse_args(p_argv):
@@ -28,24 +29,27 @@ def parse_args(p_argv):
         help='function to link to  webserver to', metavar='FUNC')
     _paser.add_option('-s', '--script_name', dest='script', default='blog',
         help='function to link to  webserver to', metavar='SCRIPT_NAME')
+    _paser.add_option('-t', '--threads', dest="threads", default=1, type='int',
+        help= 'Number of background responds threads created.')
+
     (options, args) = _paser.parse_args(p_argv)
 
     return( options, args)
 
 if __name__ == "__main__":
     (options, args)= parse_args(argv[1:])
-
     ar = importlib.import_module(options.module)
-
-    _dis = {}
-    
+    #_dis = {}
     if hasattr(ar, options.func) : 
         ap = getattr(ar, options.func)
-        for key, value in sorted(_as.items()):  ##need to convert the app stack in dispatch for wsgiserver
+        serve(ap, host=options.ip, port= options.port, threads=options.threads)
+
+        """for key, value in sorted(_as.items()):  ##need to convert the app stack in dispatch for wsgiserver
             _dis.update( { '/' + key: ap})
         _d = wsgiserver.WSGIPathInfoDispatcher(_dis)
-        server = wsgiserver.WSGIServer(_d, host=options.ip, port=options.port)
+        server = wsgiserver.WSGIServer(_d, host=options.ip, port=options.port, numthreads=1)
         server.start()
+        """
     else:
         print('failed to start')
 
