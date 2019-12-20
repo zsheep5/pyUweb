@@ -180,10 +180,16 @@ def edit_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPL
     return True, _output, ENVIRO, CLIENT_STATE, COOKIES, CSB 
 
 def new_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE, CSB='', TEMPLATE_STACK={}):
-    CONTEXT.update({'blog_id' : m.get_db_next_id(ENVIRO.get('CON'),"blog_blog_id_seq"),
-                    'submit_command': 'save_blog'}
-                    )
-    _ouput = TEMPLATE_ENGINE(pfile = TEMPLATE, 
+    cc = {'blog_id' : m.get_db_next_id(ENVIRO.get('CONN'),"blog_blog_id_seq"),
+    'submit_command': 'save_blog',
+    'blog_title': 'Blog Title',
+    'search_tags':'Meta and Search Tag here',
+    }
+    
+    CONTEXT.update(cc)
+    _r, CONTEXT = get_cats(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE, TEMPLATE_ENGINE, CSB, TEMPLATE_STACK)
+
+    _output = TEMPLATE_ENGINE(pfile = TEMPLATE, 
                             ptype = 'string',
                             pcontext = CONTEXT, 
                             preturn_type = 'string' 

@@ -81,7 +81,7 @@ def get_enviro():
     'ERROR_LOG':'system',
     'MEDIA':{'urlpath':'/media', 'filepath':base_directory+'static/media/', 'furlpath':''},
     'MEMCACHE_USE':False, 
-    'PYAPP_TO_RUN':'',
+    'APP_NAME':'/', #default to root this is the app name for the app_stack dictionary 
     'PROTOCOL':'http',
     'SITE_NAME':'zSheep Blog',
     'SCRIPT_NAME':'',

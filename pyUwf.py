@@ -34,8 +34,6 @@ def kick_start(enviro, start_response):
                 poutput='Can not connect to the Database', pre=None,
                 sr=start_response)
         _results, ENVIRO, POST, GET, CSB, APPSTACK, COOKIES, CLIENT_STATE = load_enviro(enviro, ENVIRO=ENVIRO, APPSTACK=g.APPSTACK, CLIENT_STATE=g.CLIENT_STATE)
-        _cs_results, CLIENT_STATE, SEC= session.load_session(COOKIES.get('session_id'), APPSTACK=APPSTACK, ENVIRO=ENVIRO, CLIENT_STATE=CLIENT_STATE)
-        ENVIRO.update({'SEC': SEC})
         if not check_SSL(enviro, ENVIRO):
             return server_respond(pstatus='500 ', 
                 poutput='SSL Check failure', pre=None, sr=start_response)
@@ -55,6 +53,11 @@ def kick_start(enviro, start_response):
                 ENVIRO=ENVIRO 
                 )
         else: 
+            
+            _cs_results, CLIENT_STATE, SEC, _scookie= session.load_session(COOKIES.get('session_id'), APPSTACK=APPSTACK, ENVIRO=ENVIRO, CLIENT_STATE=CLIENT_STATE)
+            ENVIRO.update({'SEC': SEC})
+            if len(_scookie):
+                COOKIES.update(_scookie)
             if CSB == '':
                 CSB = session.load_CSB(POST, GET, ENVIRO)
             _test, _output, ENVIRO, CLIENT_STATE, COOKIES, CSB = run_pyapp( 
@@ -86,6 +89,7 @@ def kick_start(enviro, start_response):
                     pcookies=COOKIES, 
                     pcsb=CSB,
                     pre=None,
+                    CLIENT_STATE=CLIENT_STATE,
                     sr=start_response)
             else:
                 run_pyapp()
@@ -110,7 +114,8 @@ def kick_start(enviro, start_response):
         penviro=ENVIRO,
         pre=None,
         poutput='Internal Server Error No Command Sent',
-        sr=start_response
+        sr=start_response,
+        CLIENT_STATE=None 
         )
 
 def error_catcher(p_AS={}, p_TS=[], pe=Exception(), ENVIRO={}, TEMPLATE_ENGINE=None,
@@ -198,7 +203,7 @@ def convert_url_path_server_path(p_upath='', ENVIRO={}):
 def server_respond(pstatus='200',
         pheaders={},
         penviro={},
-        pcookies=session.COOKIES_to_Send,
+        pcookies={},
         pre=None,
         poutput='',
         sr=None,
@@ -206,12 +211,18 @@ def server_respond(pstatus='200',
         pcsb=''
        ):
     
-    session.save_session(CLIENT_STATE, CLIENT_STATE.get('SESSION_ID'), ENVIRO=penviro) ## save the client state prior to sending data
+    if CLIENT_STATE is not None:
+        session.save_session(CLIENT_STATE, 
+                POST={}, 
+                GET={}, 
+                ENVIRO=penviro,  
+                COOKIES=pcookies, 
+                ) ## save the client state prior to sending data
     _head = list(pheaders.items()) # wsgi wants this as list 
     if len(pcookies) > 0 :
-        cc =[('Set-Cookie', str(v).strip() +";" ) for k, v in pcookies.items()] #put in the cookies 
-        aa =[('Set-Cookie', session.COOKIES_to_Send.output(attrs=None, header='', sep=''))]
-        _head.extend( aa)
+        cc =[('Set-Cookie', v.output(attrs=None, header='') ) for k, v in pcookies.items()] #put in the cookies 
+        #aa =[('Set-Cookie', pcookies.output(attrs=None, header='', sep=''))]
+        _head.extend( cc)
     _outputB = poutput.encode(encoding='utf-8', errors='replace')
 
     ##add the content length just before returning wsgi module
@@ -333,7 +344,12 @@ def run_pyapp(papp_filename='',
     
     if hasattr(_ar, papp_command) : 
         if not session.check_credentials(papp_command, CLIENT_STATE, ENVIRO): #check secuirty
-              _result, _raw_output, ENVIRO, CLIENT_STATE, COOKIES, CSB = session.load_login_page( POST=POST, GET=GET, 
+            _sec = ENVIRO.get('SEC',{})
+            if _sec.get('USER_LOGGEDIN') == True:
+                _error_message = 'User %s is Logged in but does not have permission to access function %s' %(_sec.get('DISPLAY_NAME'), papp_command)
+                raise Exception (_error_message)
+            else:
+                _result, _raw_output, ENVIRO, CLIENT_STATE, COOKIES, CSB = session.load_login_page( POST=POST, GET=GET, 
                 plogin_message= "This function %s requires you to be logged in "%(papp_command), 
                 ENVIRO=ENVIRO, COOKIES=COOKIES, CONTEXT=CONTEXT, TEMPLATE_ENGINE=TEMPLATE_ENGINE, CSB=CSB, TEMPLATE_STACK=TEMPLATE_STACK )
         else :
@@ -437,30 +453,30 @@ def match_uri_to_app(puri='', APPSTACK={}, ENVIRO={} ):
     """
     #lets do the simple match first
     if puri in APPSTACK :
-        return True, APPSTACK.get(puri)
+        return True, APPSTACK.get(puri), puri
     ##simple match failed now we process the URI starting at the end 
     # trying to find a matching app pulling each part of the path.
     
     for _ic in range(1, puri.count('/')):
         _test = puri[0: puri.find('/', 0, _ic)]
         if _test in APPSTACK:
-            return True, APPSTACK.get(_test)
+            return True, APPSTACK.get(_test), _test
     #failed to match yet again  now just try matching at each part of the uri
     # split apart the URI at "/" and load the rest of the path in not matched  
     # uri global varaible 
     for _parts in reversed(puri.split('/')) :
         if _parts in APPSTACK :
-            return True, APPSTACK.get(_parts)
+            return True, APPSTACK.get(_parts), _parts
     ## exhausted all matches going to the root
     if convert_url_path_server_path(puri, ENVIRO) == "":
         if '/' in APPSTACK:
-            return True, APPSTACK.get('/', {})
-    return False, None
+            return True, APPSTACK.get('/', {}), '/'
+    return False, None, '/'
         
-def check_app_in_appstack(ENVIRO={}, APPSTACK={}):
-    if ENVIRO['PYAPP_TO_RUN'] in APPSTACK.keys():
-        return True
-    return False
+#def check_app_in_appstack(ENVIRO={}, APPSTACK={}):
+#    if ENVIRO['PYAPP_TO_RUN'] in APPSTACK.keys():
+#        return True
+#    return False
 
 def build_template(papp_name='', ptstack=[], p_check_components=True, p_template_extension='.html', ENVIRO={} ):
     """
@@ -625,17 +641,19 @@ def load_enviro(e, ENVIRO={}, POST={}, GET={}, CSB='', APPSTACK={}, CLIENT_STATE
     ENVIRO['DOCS']['furlpath']= build_url_root_path(ENVIRO=ENVIRO) + ENVIRO['DOCS']['urlpath']
     ENVIRO['MEDIA']['furlpath']=build_url_root_path(ENVIRO=ENVIRO) + ENVIRO['MEDIA']['urlpath']
     
-    CLIENT_STATE = CLIENT_STATE
     #Load Parse and Process the POST and GET commands
+    _appname = '/'
     
     if e.get('REQUEST_METHOD').upper() == 'POST':
         _result, POST, CSB = parse_POST(e, ENVIRO=ENVIRO)
-        _result, APPSTACK = match_uri_to_app(ENVIRO.get('URI_PATH'), APPSTACK, ENVIRO)
+        _result, APPSTACK, _appname = match_uri_to_app(ENVIRO.get('URI_PATH'), APPSTACK, ENVIRO)
         _result, COOKIES = session.load_cookies(e.get('HTTP_COOKIE'))
     elif e.get('REQUEST_METHOD').upper() == 'GET':
         _result, GET, CSB =parse_GET(e, ENVIRO=ENVIRO)
-        _result, APPSTACK = match_uri_to_app(ENVIRO.get('URI_PATH'), APPSTACK, ENVIRO) # find the python applicaiton to run 
+        _result, APPSTACK, _appname = match_uri_to_app(ENVIRO.get('URI_PATH'), APPSTACK, ENVIRO) # find the python applicaiton to run 
         _cr, COOKIES =session.load_cookies(e.get('HTTP_COOKIE')) # load the cookies sent and load a saved session state latter
+    
+    ENVIRO.update({'APP_NAME':_appname})
     
     return _result, ENVIRO, POST, GET, CSB, APPSTACK, COOKIES, CLIENT_STATE
 
@@ -927,52 +945,28 @@ def test_for_entries_in(p_list=[], p_dict={}):
             _return.append(_i)
     return _return 
 
-def create_access_list_from_py(p_pythonFile='', p_con=None):
+def create_access_list_from_py(p_pythonFile='', p_user_id= 1, p_con=None):
     if p_pythonFile == '' and p_con is None:
         return False
     import inspect as ins
     ar = importlib.import_module(p_pythonFile)
     _list = ins.getmembers(ar)
-
-    q_str = """insert into sec_access  
-            ( sa_allowed, sa_target_id, sa_target_type,
-            sa_app_name, sa_app_function)
-               values (  
-                %(sa_allowed)s ,
-                %(sa_target_id)s ,
-                %(sa_target_type)s,
-                %(sa_app_name)s ,
-                %(sa_app_function)s 
-            )
-            on conflict do nothing;
-        """
-    cur = p_con.cursor()
-
+    _rt = []
     for _i in _list:
         if ins.isfunction(_i[1]):
-            cur.execute(q_str,
-            { 
+            _rt.append(
+                { 
                'sa_allowed': True,
-               'sa_target_id': 1,
+               'sa_target_id': p_user_id,
                'sa_target_type': 'user',
                'sa_app_name': p_pythonFile,
                'sa_app_function': _i[0]
                 }
             )
-    return 
+    return _rt
 
-def add_to_security(p_id=-1, p_sec_type='user', 
-                p_app_name='name of the app in the app stack', 
-                p_app_function = 'function to be called', p_allowed=False ):
-    
-    if p_id == -1: # in insert mode:
-        
-    
+def write_access_list_to_db( p_list_ofDics =[], pcon=None):
 
-def create_access_list_from_app( p_app_stack={}, p_con=None):
-    if p_app_stack == '' and p_con is None:
-        return False
-    
     q_str = """insert into sec_access  
             ( sa_allowed, sa_target_id, sa_target_type,
             sa_app_name, sa_app_function)
@@ -986,12 +980,40 @@ def create_access_list_from_app( p_app_stack={}, p_con=None):
             on conflict do nothing;
         """
     cur = p_con.cursor()
+    for _i in p_list_ofDics:
+        cur.execute(q_str,_i  )
+    return 
+
+def copy_sec_from_user( p_from_type='user', p_from_id=1, p_to_type = 'user', p_to_id= 1, p_con=None ):
+    
+    if p_id == -1: # in insert mode:
+          q_str = """insert   into sec_access  
+                (sa_allowed, sa_target_id, sa_target_type, 
+                sa_app_name, sa_app_function)
+                (select sa_allowed, %(p_to_id)s, (%p_to_type), sa_app_name, sa_app_function from sec_access
+                where sa_target_id = %(p_from_teyp)s and sa_target_id =%(p_from_id)s );
+        """
+    run_sql_command(CONN = p_con, p_sql='q_str',  p_topass=
+                        {
+                            p_from_type:p_from_type, 
+                            p_from_id:p_from_id, 
+                            p_to_type:p_to_type , 
+                            p_to_id:p_to_id,
+                        }
+         )
+    for _i in p_list_ofDics:
+        cur.execute(q_str,_i  )
+    return 
+
+def create_access_list_from_app( p_app_stack={}, puser_id= 1):
+    _rt = []
+    cur = p_con.cursor()
     for _key, _value in sorted(p_app_stack.items()):
-        cur.execute(q_str,
+        _rt.append(
             { 
             'sa_allowed': not _value['security'],
             'sa_target_id': 1,
-            'sa_target_type': 'user',
+            'sa_target_type': puser_id,
             'sa_app_name': _key,
             'sa_app_function': _value['command']
             }

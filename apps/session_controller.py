@@ -23,13 +23,21 @@ CSB_STATUS =False
 
 def check_credentials(papp_to_run='', CLIENT_STATE={}, ENVIRO={}):
     ##function assums SEC has been initialized.
-    _app = CLIENT_STATE.get('APPSTACK', {})
+    _ap = CLIENT_STATE.get('APPSTACK', {})
     _sec = ENVIRO.get('SEC', {})
-    if _app.get('security', True): ## default to True if not defined it blocks access by default
+    _ap_name = ENVIRO.get('APP_NAME', '/')
+    if _ap.get('security', True): ## default to True if not defined it blocks access by default
         _ua = _sec.get('USER_ACCESS')
-        if isinstance(_ua, dict): ## no creditianls are loaded return false
-            return _ua.get(papp_to_run, False)
-        return False
+        if isinstance(_ua, list): ## no creditianls are loaded return false
+            _size = len(_ua)
+            _i = 0
+            _compare = _ap_name + '.' + papp_to_run
+            while  _i <_size:
+                _return = _ua[_i].get(_compare, False )
+                if _return == True:
+                    return _return
+                _i = _i+1
+            return False
     return True
 
 def check_user_credtials(_ua={}, p_user=-1):
@@ -76,7 +84,7 @@ def log_in( POST ={}, GET={}, ENVIRO={}, CLIENT_STATE={}, COOKIES={}, CONTEXT={}
         ENVIRO.update({'SEC':SEC})
     _message = plogin_message
     if POST.get('user_name') and POST.get('pwd'):
-        _r, SEC = load_credentials(POST.get('user_name',[0])[0],  POST.get('pwd',[0])[0], ENVIRO )
+        _r, SEC = load_credentials_user_pwd(POST.get('user_name',[0])[0],  POST.get('pwd',[0])[0], ENVIRO )
         if _r:
             ENVIRO.update({'SEC':SEC})
             ##set the current session so it knows its logged in
@@ -139,7 +147,7 @@ def change_pwd_page(POST={},
                     TEMPLATE_ENGINE=None,
                     TEMPLATE_STACK={}):
     if POST.get('user_name') and POST.get('current_pwd')  and POST.GET('new_pwd') and POST.get('confirm'):
-        _result, SEC =load_credentials(POST.get('user_name'), POST.get('pwd'), ENVIRO )
+        _result, SEC =load_credentials_user_pwd(POST.get('user_name'), POST.get('pwd'), ENVIRO )
         if _result == False : 
             return False 
         if POST.GET('new_pwd') != POST.get('confirm'): 
@@ -165,19 +173,20 @@ def load_session(p_session_id = None, APPSTACK={}, ENVIRO={}, CLIENT_STATE={}):
     else returns false load enviroment should finish as normal
     """
     _sec = ENVIRO.get('SEC')
+    _session_cookie = {}
     CLIENT_STATE.update({'APPSTACK':APPSTACK})
     if p_session_id is None or not hasattr(p_session_id, 'value') :
-        create_session(ENVIRO=ENVIRO)
-        return False,  CLIENT_STATE, _sec
+        _r, CLIENT_STATE, _session_cookie = create_session(CLIENT_STATE=CLIENT_STATE,  ENVIRO=ENVIRO)
+        return False,  CLIENT_STATE, _sec, _session_cookie
     else:
         if p_session_id.value.isdigit() == False:
-            return False, CLIENT_STATE, _sec
+            return False, CLIENT_STATE, _sec, _session_cookie
         q_str =""" select cs_data from client_state 
             where cs_id = %(session_id)s """
         _r=m.run_sql_command(ENVIRO.get('CONN'),q_str,{'session_id':p_session_id.value})
         if len(_r) ==0: ##the database does not have the session data create a new one
-            create_session(ENVIRO=ENVIRO)
-            return False,  CLIENT_STATE, _sec
+            _r, CLIENT_STATE, _session_cookie = create_session(CLIENT_STATE=CLIENT_STATE,  ENVIRO=ENVIRO)
+            return False,  CLIENT_STATE, _sec, _session_cookie
         CLIENT_STATE.update({'PREV_STATE':_r[0]['cs_data']})
         ##set the global client_state = to the one stored in the database
         _timeout = dt.strptime(CLIENT_STATE.get('PREV_STATE',{}).get('TIMEOUT','' ), '%Y-%m-%d %H:%M:%S.%f')
@@ -187,26 +196,29 @@ def load_session(p_session_id = None, APPSTACK={}, ENVIRO={}, CLIENT_STATE={}):
         
         _ctime = dt.utcnow()
         if _timeout< _ctime \
-                and 'security' in ENVIRO.get('PYAPP_TO_RUN', None)  \
+                and 'security' in APPSTACK  \
                 and not _sec['USER_AUTOLOGIN']:
             ## the session has timeout and the app to run requiries security and 
             # the user auto login is turned off go to log in
             m.error('Seesion Id %s timeout, redirect to login script ')
             save_session(CLIENT_STATE, 'retry',)
-            return False, CLIENT_STATE
+            return False, CLIENT_STATE, _session_cookie
         elif CLIENT_STATE.get('TIMEOUT')< _ctime and _sec.get('USER_AUTOLOGIN',False):
             ## session has timeout but the autologin is turned on so log the user in and continue
-            _results, _sec = load_credentials(p_session_id, ENVIRO)
+            _results, _sec = load_credentials(int(p_session_id.value), ENVIRO)
             if _results:
                 if CLIENT_STATE['last_command'] == 'retry':
                     CLIENT_STATE.update({'last_command':'retry'})
-                    CLIENT_STATE.update({'prev_state':_session})
-                return True, CLIENT_STATE
+                    CLIENT_STATE.update({'prev_state':{}})
+                CLIENT_STATE.update({'session_id':int(_session_cookie.value)})
+                return True, CLIENT_STATE, _session_cookie
         elif _timeout > _ctime:
-            _results, _sec = load_credentials(COOKIES.get('user', ''), COOKIES.get('pwd', ''), ENVIRO )
+            _results, _sec = load_credentials(psession_id =int(p_session_id.value), ENVIRO=ENVIRO )
             if len(CLIENT_STATE.get('last_command','')) > 0:
-                return True, CLIENT_STATE, _sec
-    return False, CLIENT_STATE, _sec
+                return True, CLIENT_STATE, _sec, _session_cookie
+        CLIENT_STATE.update({'session_id':int(p_session_id.value)})
+
+    return False, CLIENT_STATE, _sec, _session_cookie
 
 def load_CSB(POST={}, GET={},  ENVIRO={}):
     _csb = POST.get('CSB', False)
@@ -244,11 +256,11 @@ def create_session(CLIENT_STATE={},
                 CONTEXT={},):
     """Gets the next session id from the database and sets the global variable and cookie  """
     session_id = m.get_db_next_id( ENVIRO.get('CONN'), 'client_state_cs_id_seq')
-    set_cookie('session_id', session_id, phttponly=True)
-    CLIENT_STATE.update({'SESSION_ID': session_id})
+    _new_cookie = set_cookie('session_id', session_id, pdomain=ENVIRO['HTTP_HOST'], phttponly=True, )
+    CLIENT_STATE.update({'session_id': session_id})
     CLIENT_STATE.update({'TIMEOUT': dt.utcnow() + td(seconds=ENVIRO.get('SEC').get('USER_TIMER', 600))})
     save_session(CLIENT_STATE, POST, GET, ENVIRO, COOKIES, CONTEXT, '')
-    return True, CLIENT_STATE
+    return True, CLIENT_STATE, _new_cookie
 
 def save_session(CLIENT_STATE={},  
                 POST={}, 
@@ -259,14 +271,15 @@ def save_session(CLIENT_STATE={},
                 TEMPLATE=''
             ):
     _sec = ENVIRO.get('SEC')
-    if CLIENT_STATE.get('SESSION_ID', '') =='':
-        CLIENT_STATE.update({'SESSION_ID':str(m.get_db_next_id(ENVIRO.get('CONN'),'client_state_cs_id_seq'))})
+    if CLIENT_STATE.get('session_id', '') =='':
+        CLIENT_STATE.update({'session_id':str(m.get_db_next_id(ENVIRO.get('CONN'),'client_state_cs_id_seq'))})
 
     ##post and  get should always hold the last set of commands. 
     # when it reloads it places the previous POST and GET's in prev_state   
     CLIENT_STATE.update({'TIMEOUT' : str(dt.utcnow() + td(seconds=_sec.get('USER_TIMER',6000)))})
     CLIENT_STATE.update({'POST': POST})
     CLIENT_STATE.update({'GET': GET})
+    CLIENT_STATE.update({'USER_ID':_sec.get('USER_ID',-1)})
     q_sql = """ insert into client_state ( cs_id, cs_data, cs_ip ) values (
                 %(session_id)s, %(pdict)s, %(remote_ip)s  )
                 on conflict (cs_id) do Update
@@ -275,7 +288,7 @@ def save_session(CLIENT_STATE={},
                 cs_user_id = %(user_id)s
              """
     _rec = m.run_sql_command(ENVIRO.get('CONN'), q_sql, 
-                        {'session_id':CLIENT_STATE.get('SESSION_ID'),
+                        {'session_id':CLIENT_STATE.get('session_id'),
                         'pdict': json.dumps(CLIENT_STATE),
                         'remote_ip':ENVIRO.get('REMOTE_ADDR','0.0.0.0'),
                         'user_id':  _sec.get('USER_ID',-1),
@@ -287,18 +300,18 @@ def load_credentials(psession_id=-1, ENVIRO={}):
     q_str ="""select user_id, user_name, user_last , user_email ,
                  user_type, user_pwd, user_displayname from users
                  where user_id in (select cs_user_id from client_state where
-                 cs_id = %(psession_id)s, and cs_ip = %(ip)s)
+                 cs_id = %(psession_id)s and cs_ip = %(ip)s)
             """
 
     _rec = m.run_sql_command(ENVIRO.get('CONN'), q_str,  
                                 {'psession_id':psession_id, 
-                                'id':ENVIRO.get('REMOTE_ADDR', '0.0.0.0')
+                                'ip':ENVIRO.get('REMOTE_ADDR', '0.0.0.0')
                                 } 
                             )
     return create_SEC(_rec, ENVIRO)
 
-def load_credentials(puser='', pwd='' , ENVIRO={}):
-    #client_state = ENVIRO.
+def load_credentials_user_pwd(puser='', pwd='' , ENVIRO={}):
+   #client_state = ENVIRO.
     q_str ="""select user_id, user_name, user_last , user_email ,
                  user_type, user_pwd, user_displayname from users
                  where crypt( %(pwd)s, user_pwd) = user_pwd
@@ -306,7 +319,7 @@ def load_credentials(puser='', pwd='' , ENVIRO={}):
             """
     _rec = m.run_sql_command(ENVIRO.get('CONN'), q_str,  {'pwd':pwd, 'puser':puser} )
     return create_SEC(_rec, ENVIRO)
-    
+   
 def create_SEC( pdb_record={}, ENVIRO={}):
     _sec= ENVIRO.get('SEC')
     if len(pdb_record) == 1:  ##if there is more than one record this a big problem with the database  
@@ -351,13 +364,13 @@ def create_SEC( pdb_record={}, ENVIRO={}):
        _sec.update({'USER_ACCESS':_rec[0]['security']})
     return True, _sec
 
-def set_cookie(pname='', pvalue='', pexpires=None, pdomain=None,
+def set_cookie(pname='', pvalue='', pexpires=3000, pdomain=None,
               psecure=False, phttponly=False, ppath='/'):
     """Sets a cookie."""
     morsel = Morsel()
     name, value = str(pname), str(pvalue)
     morsel.set(name, value, value)
-    morsel['expires'] = pexpires or  (dt.utcnow() + td(seconds=COOKIES_EXPIRES)).strftime('%a, %d %b %Y %H:%M:%S %Z') 
+    morsel['expires'] =  (dt.utcnow() + td(seconds=pexpires)).strftime('%a, %d %b %Y %H:%M:%S %Z') 
     if ppath:
         morsel['path'] = ppath
     if pdomain:
@@ -366,17 +379,18 @@ def set_cookie(pname='', pvalue='', pexpires=None, pdomain=None,
         morsel['secure'] = psecure
     if phttponly:
         morsel['httponly'] = True
-    new_cookie(name,morsel)
+    return {name:morsel}
 
-def new_cookie(pkey,value):
-    COOKIES.update({pkey:value})
-    COOKIES_to_Send.update({pkey:value})
+#def new_cookie(pkey,value):
+#    COOKIES.update({pkey:value})
+#    COOKIES_to_Send.update({pkey:value})
 
 def load_cookies(pcookie_string=''):
     if pcookie_string =='' or pcookie_string is None:
         return False, {}
     _t = bCookie()
     _t.load(pcookie_string)
+    
     return True, _t
 
 def cookies_tuple_string(p_cdic={}):
