@@ -19,7 +19,7 @@
 </tr>
 <tr>
     <th rowspan="3">Exception: </th>
-    <tr><td>Name: <TMPL_VAR name="EXCEPTION_CLASS_NAME"></td></tr>
+    <tr><td>Name: <TMPL_VAR name="EXCEPTION_CLASS_NAME" default="Exception Class Name if it has one"></td></tr>
     <tr><td>Details: <TMPL_VAR name="EXCEPTION"></td></tr>
 </tr>
 <tr>    
@@ -49,7 +49,7 @@
 <tr> 
         <th rowspan="4"> Image Settings </th>      
         <tr><td>server path: <TMPL_VAR name="IMAGES.filepath"> </td> </tr>
-        <tr><td>r>>full url path: <TMPL_VAR name="IMAGES.furlpath"> </td> </tr>
+        <tr><td>full url path: <TMPL_VAR name="IMAGES.furlpath"> </td> </tr>
         <tr><td>short url path: <TMPL_VAR name="IMAGES.urlpath"> </td> </tr>
 </tr>
     <tr>
@@ -65,14 +65,14 @@
         <tr><td>short url path: <TMPL_VAR name="STATIC.urlpath"> </td></tr> 
     </tr>
 </tr> 
-<th rowspan="11">  Security and User Access </th>
+<th rowspan="12">  Security and User Access </th>
     <tr> <td> Security Required: <TMPL_VAR name="SEC.REQUIRE_LOGGIN"> </td> </tr>
-    <TMPL_LOOP name="USER_ACCESS"> 
+    <TMPL_LOOP name="SEC.USER_ACCESS"> 
     </TMPL_LOOP>  
     <tr><td>AutoLogin: <TMPL_VAR name="SEC.USER_AUTOLOGIN"> </td> </tr>
     <tr><td>Client: <TMPL_VAR name="SEC.USER_CLIENT"> </td></tr> 
     <tr><td>Email: <TMPL_VAR name="SEC.USER_EMAIL"> </td></tr> 
-    <TMPL_LOOP name="USER_GROUP"> 
+    <TMPL_LOOP name="SEC.USER_GROUP"> 
     </TMPL_LOOP>  
     <tr><td>ID Key: <TMPL_VAR name="SEC.USER_ID"> </td></tr> 
     <tr><td>IP Address: <TMPL_VAR name="SEC.USER_IPADDRESS"> </td></tr> 

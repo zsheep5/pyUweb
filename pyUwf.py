@@ -1,6 +1,8 @@
-import psycopg2, psycopg2.extras, psycopg2.errors
+import psycopg2, psycopg2.extras, psycopg2.errors 
 import  os, importlib, time
 from urllib.parse import quote_plus, urlparse, urlencode, parse_qs
+from cgi import FieldStorage as fs 
+from cgi import parse_multipart
 
 from datetime import datetime as dt 
 from datetime import timedelta as td
@@ -19,6 +21,12 @@ def kick_start(enviro, start_response):
     ENVIRO =g.get_enviro()
     ENVIRO.update({'APPSTACK':g.APPSTACK})
     ENVIRO.update({'SEC': g.SEC}) ##start with the basic SEC skeleton
+    POST={}
+    GET={} 
+    CLIENT_STATE={}
+    COOKIES=COOKIES={}
+    CONTEXT={}
+    CSB=''
     try :
         if not check_paths(ENVIRO):
             return server_respond(pstatus='500 ', 
@@ -83,8 +91,9 @@ def kick_start(enviro, start_response):
                     MEMCACHE=g.MEMCACHE
                 )
             if _test:
-                return server_respond(poutput=_output, 
-                    pheaders=ENVIRO.get('HEADERS'), 
+                return server_respond(pstatus=ENVIRO.get('STATUS', '200'),
+                    poutput=_output, 
+                    pheaders=ENVIRO.get('HEADERS'),
                     penviro=ENVIRO, 
                     pcookies=COOKIES, 
                     pcsb=CSB,
@@ -489,7 +498,7 @@ def build_template(papp_name='', ptstack=[], p_check_components=True, p_template
     """
     _error_mess = ''
     _template_name = papp_name + p_template_extension
-    _fpath_template=  ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER',os.getcwd()) + _template_name
+    _fpath_template=  ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER',os.getcwd()+'/') + _template_name
 
     if template_cache_is_in(_template_name, ENVIRO ) :
         if p_check_components :
@@ -516,7 +525,7 @@ def build_template(papp_name='', ptstack=[], p_check_components=True, p_template
             else :
                 _bts = _bts.replace(_rstring, _tp.read())
         else:
-            error('Failed to find the template %s for app %s' %(_i, papp_name), 'build template',  ENVIRO=ENVIRO)
+            raise Exception('Failed to find the template %s for app %s' %(_i, papp_name))
     return (template_cache_put_in(_template_name , _bts, ENVIRO), _bts, _template_name)
 
 def template_age_vs_parts_age(p_rendered_template='', ptstack={}, ENVIRO={} ):
@@ -658,10 +667,21 @@ def load_enviro(e, ENVIRO={}, POST={}, GET={}, CSB='', APPSTACK={}, CLIENT_STATE
     return _result, ENVIRO, POST, GET, CSB, APPSTACK, COOKIES, CLIENT_STATE
 
 def parse_POST(web_enviro, POST={}, CSB='', ENVIRO={}):
-    script = ( web_enviro.get('REQUEST_URI', '').encode('iso-8859-1').decode(errors='replace') or
-            web_enviro.get('SCRIPT_NAME', '').encode('iso-8859-1').decode(errors='replace') or 
-            web_enviro.get('REDIRECT_URL', '').encode('iso-8859-1').decode(errors='replace')
-        )
+    if 'REQUEST_URI' in web_enviro :
+        _url = bytes_to_text(web_enviro.get('REQUEST_URI', b''))
+    elif 'PATH_INFO' in web_enviro :
+        _url = bytes_to_text(web_enviro.get('PATH_INFO', b''))
+    elif 'mod_wsgi.path_info' in web_enviro :    
+        GET.update({"PATH_TO_APP":bytes_to_text(web_enviro.get('mod_wsgi.path_info','')) })
+    elif 'mod_wsgi.script_name' in  web_enviro:
+        GET.update({'SCRIPT_ROOT':bytes_to_text(web_enviro.get('mod_wsgi.script_name',''))})
+    if _url is None:
+        return True
+    else :
+        script = ( _url.encode('iso-8859-1').decode(errors='replace') or 
+                   _url.encode('utf-8').decode(errors='replace') or
+                   _url.encode('utf-8').decode(errors='replace')
+                )  
     POST.update({'url_path': script})
     POST.update({'POST_COUNT':0})
     try:
@@ -669,13 +689,79 @@ def parse_POST(web_enviro, POST={}, CSB='', ENVIRO={}):
     except (ValueError):
         request_body_size = 0
     if request_body_size > 0:
-        form_data = parse_qs(web_enviro.get('wsgi.input').read(request_body_size))
-        for key, value in form_data.items():
-            POST.update({bytes_to_text(key): [bytes_to_text(i) for i in value]})
-            POST['POST_COUNT']+= 1
-        CSB = POST.get('CSB', [''])[0]
+        _ct = web_enviro.get('CONTENT_TYPE', '').split(';')
+        _dd = web_enviro.get('wsgi.input')
+        _form_data = {}
+        if 'application/x-www-form-urlencoded' in _ct:
+            _data = _dd.read(request_body_size)
+            try:
+                _form_data = parse_qs(_data)
+            except UnicodeDecodeError:
+                # ... but some user agents are misbehaving :-(
+                _form_data = parse_qs(_data.decode('iso-8859-1'))
+            for key, value in _form_data.items():
+                POST.update({bytes_to_text(key): [bytes_to_text(i) for i in value]})
+                POST['POST_COUNT']+= 1
+        
+        else : 
+            _bound =''
+            for i in _ct:
+                if i.rfind('boundary=')>=0:
+                    _bound = i[_bound.rfind('boundary=')+11:]
+            _dd.seek(0)
+            _data = _dd.read(request_body_size)
+            POST.update({'form_data':parse_mpf(_dd, bytes(_bound.encode('utf-8')), request_body_size)})
+        CSB = POST.get('CSB', [''])[0]    
     POST.update({'CONTENT_TYPE': web_enviro.get('CONTENT_TYPE')})
     return True, POST, CSB
+
+def parse_mpf(data=None, boundary=b'', size = 0):
+    _r=[]
+    data.seek(0)  
+    _count = 0
+    in_part = False
+
+    while True:
+        _d=data.readline() 
+        if _d.rfind(boundary)>=0 and in_part==False:
+            in_part = True 
+            _count = _count +1
+            _form_header = []
+            _data =b''
+            _place = data.tell()
+        elif _d.rfind(boundary)>=0 and in_part==True:
+            _r.append({'header':parse_mdf_header(_form_header),
+                       'data':_data[2:]  ##remove the leading CRLF in the data
+                        })
+            in_part =False 
+            _form_header = []
+            _data =b''
+            if data.tell() == size:
+                break
+        else:
+            if _d.rfind(b'Content')>=0:
+               _form_header.append(bytes_to_text(_d[:-2]))
+            else:
+                _data = _data + _d
+    return _r
+
+def parse_mdf_decode_payload(data , encode_method):
+    import binascii
+    import quopri
+
+def parse_mdf_header(plist=[]):
+    _r = {}
+    for i in plist:
+        cc = i.split(';')
+        for i2 in cc:
+            cc2 = i2.split(':')
+            if len(cc2)>1:
+                _r.update({cc2[0].strip():cc2[1].strip()})
+            cc2 = i2.split('=')
+            if len(cc2)>1: 
+                _r.update({cc2[0].strip():cc2[1].replace('"', '')})
+    return _r
+
 
 def parse_GET(web_enviro, GET={}, CSB='', ENVIRO={}):
     if 'REQUEST_URI' in web_enviro :
@@ -745,7 +831,10 @@ def run_sql_command(CONN = None, p_sql='', p_topass= None):
         raise Exception('No Database Connection passed in ')
     _cur = CONN.cursor(cursor_factory=psycopg2.extras.RealDictCursor) 
     try :
-        _cur.execute(p_sql, p_topass)
+        if p_topass is None:
+            _cur.execute(p_sql, p_topass)
+        else:
+            _cur.execute(p_sql, p_topass)
     except psycopg2.ProgrammingError as e :
         import traceback as tb 
         _stack = tb.print_stack()
@@ -753,7 +842,7 @@ def run_sql_command(CONN = None, p_sql='', p_topass= None):
         _error_mess = """SQL ERROR the last command sent ' %(command)s
         caused the following error %(error)s 
         parameters= %(parameters)s
-        Exception Call Stack """ % {'command':p_sql, 'error':_db_error, 'parameters':str(p_topass)}   
+        Exception Call Stack """ % {'command':p_sql, 'error':_db_error, 'parameters':str(p_topass)} 
         CONN.rollback()
         raise Exception(_error_mess) from e 
     except Exception as e:  #yes this is a generic catch but there are hundreds of different possible execptions declared in pyscopg2 class 
@@ -777,6 +866,28 @@ def create_template_engine():
     from python_html_parser import render_html
     return ender_html
 
+def client_redirect(url_path, ENVIRO, redirect_code='303', ):
+    ENVIRO.update({'STATUS':redirect_code})
+    ENVIRO['HEADERS'].update({'Location:': url_path})
+    return ENVIRO
+
+def furl_get_to_app(papp, ENVIRO, GET, ):
+    if ENVIRO['APPSTACK'].get(papp) is None :
+        return False, ''
+
+    server_path = build_url_root_path(ENVIRO)
+    _get_command = ''
+
+    for _k, _v in GET.items():
+        _get_command = _get_command + quote_plus(str(_k)) + '=' + quote_plus(str(_v)) + "&"
+
+    if _get_command == '':
+        True, server_path + '/'  +papp
+    else:
+        return True, server_path +'/' + papp + '?' + _get_command[:-1]
+
+def furl_url_to_file():
+    pass
 def check_SSL(e, ENVIRO):
     if ENVIRO.get('SEC').get('SSL_REQUIRE'):
         if e.get('HTTPS', 'off') in ('on', '1'):
@@ -876,7 +987,8 @@ def build_url_root_path(ENVIRO={}):
     return _path 
 
 def build_url_links(p_descrip_command={}, p_url_path=None, 
-                p_app_command=None, p_protocol=None, p_host=None, p_port=None, ENVIRO={}):
+                p_app_command=None, p_protocol=None, p_host=None, 
+                p_port=None, ENVIRO={}, p_escape=True):
     
     """creates url(s) from dictionary
     p_descrip_command is dictionary looking for key values  containing the 
@@ -917,7 +1029,10 @@ def build_url_links(p_descrip_command={}, p_url_path=None,
         p_app_command = ''
     r_urls = []
     for bl in p_descrip_command :
-        _link = _urlroot + p_url_path + p_app_command+ quote_plus(bl['url'])
+        if p_escape:
+            _link = _urlroot + p_url_path + p_app_command+ quote_plus(bl['url'])
+        else:
+            _link = _urlroot + p_url_path + p_app_command + bl['url']
         _url_string = """<a href="%s">%s</a>""" %(_link, bl['linktext'])
         r_urls.append( { 'name': bl['name'], 'linktext':bl['linktext'],  'url':_url_string })
 
@@ -1179,4 +1294,10 @@ def convert_list_to_list_of_dict(plist=[], key_value='converted.' ):
         _count = _count + 1
     return _return_list_dict
 
- 
+def db_arrary_tolist_dic(p_list = [] , p_name= 'name'):
+    _r = []
+    for i in p_list:
+        _r.append({p_name:i})
+    return _r
+
+

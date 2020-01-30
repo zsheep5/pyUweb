@@ -99,7 +99,7 @@ def get_enviro():
     'TEMPLATE_CACHE_AGING_SECONDS':300,
     'TEMPLATE_TYPE': 'file',  #ctemplate works off a string containing the html sent to it or path/filename to the html template 
     'TEMPALATE_EXTENSION':'.html',
-    'STATUS':'200 ',
+    'STATUS':'200',
     'URL_CURRENT_PATH':'',
     'HEADERS':{
         'Content-Type':'text/html;',
@@ -176,10 +176,10 @@ APPSTACK = {
             'client_cacheability':'private',
             'cache_age':30,    
             },
-    'view_category':{'template_stack':"view", 
+    'list_category':{'template_stack':"list_cats", 
             'filename':'blog', 
             'path':'.', 
-            'command':'view_category',
+            'command':'list_category',
             'security':False,
             'content_type':'text/html',
             'server_cache_on':True,
@@ -248,10 +248,17 @@ APPSTACK = {
              'security':True,
              'content_type': 'text/html',
              },
-    'image_view':{'template_stack':'view',
-                  'filename':'image_view', 
+    'file_view':{'template_stack':'view',
+                  'filename':'file_helper', 
                   'path':'.', 
-                  'command':'init', 
+                  'command':'list_files', 
+                  'security':False,
+                  'content_type': 'text/html',
+            },
+    'file_upload':{'template_stack':'file',
+                  'filename':'file_helper', 
+                  'path':'.', 
+                  'command':'upload_file', 
                   'security':False,
                   'content_type': 'text/html',
             },
@@ -280,12 +287,16 @@ TEMPLATE_STACK={
             'blog.html', 
             'blog_comments.html', 
             'search.html'],
-
     'view':['view_page.html',
             'base.html',
             'top_nav_bar.html',
             'side_bar.html',
             'comments.html',
+            'js.html'
+        ],
+    'list_cats':['list_cats.html',
+            'base.html',
+            'top_nav_bar.html',
             'js.html'
         ],
     'list':['list_page.html',
@@ -303,6 +314,10 @@ TEMPLATE_STACK={
             'js.html'
         ],
     'error':['error.html'],
+    'file':['base.html',
+            'top_nav_bar.html',
+            'side_bar.html',
+            'file.html']
 }
 ## the template extension is 
 

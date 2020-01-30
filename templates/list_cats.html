@@ -11,23 +11,16 @@
    	<div class="row">
    		<div id="main" class="eight columns">
    			<article class="entry">
-					<header class="entry-header">
+                    <header class="entry-header">
 
-						<h2 class="entry-title">
-							<TMPL_VAR name="blog.blog_title">
+                        <h2 class="entry-title">
+                            <TMPL_LOOP name="list_articles">
+                                    <li><TMPL_VAR name="url" ></li>						
+                            </TMPL_LOOP>
+					
 						</h2> 				 
 						
 						<div class="entry-meta">
-							<ul>
-								<li><TMPL_VAR name="blog.blog_date"></li>
-								<span class="meta-sep">&bull;</span>							
-								<li>
-									<TMPL_LOOP name="blog.list_tags">
-										<a href="#" title="" rel="category tag"><TMPL_VAR name="list_tags"></a>,
-									</TMPL_LOOP>
-									
-								</li>
-							</ul>
 						</div> 
 				 
 					</header> 
@@ -39,11 +32,6 @@
 					</div>
 					-->
 
-					<div class="entry-content">
-						<TMPL_VAR name="blog.blog_htmltext">						
-					</div>
-
-
   			       <ul class="post-nav group">
   			            <li class="prev"><TMPL_VAR name="newer.url"></TMPL_VAR></li>
   				         <li class="next"><TMPL_VAR name="older.url"></li>
@@ -51,18 +39,9 @@
 
 				</article>
 
-				<!-- Comments
-            ================================================== -->
-            <div id="comments">
-				<TMPL_INCLUDE name="comments.html"/>
-
-            </div>  <!-- Comments End -->		
-   			
+				
 
    		</div> <!-- main End -->
-			<TMPL_INCLUDE name="side_bar.html"/>
-
-   		 <!-- end sidebar -->
 
   		</div> <!-- end row -->
 

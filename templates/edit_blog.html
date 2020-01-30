@@ -1,5 +1,5 @@
 <TMPL_INCLUDE name="base.html"/>
-
+<TMPL_INCLUDE name="js.html"/>
 <!-- Header
    ================================================== -->
    <body class="single"> 
@@ -9,37 +9,36 @@
 
    ================================================== -->
   
-   
-   <form action="<TMPL_VAR name = "submit_command">" method="post">   
-      <input type="text" name="title" id="title" value="<TMPL_VAR name = "blog_title">"  /><br>
-      <input type="hidden" name="blog_id" id="blog_id" value="<TMPL_VAR name = "blog_id">" />
-      <input type="hidden" name="CSB" value="<TMPL_VAR name = "CSB">" />
-      <textarea name="content" id="content" >hi there</textarea>
-      <input type="text" name="search_tags" id="search_tags" value="<TMPL_VAR name = "search_tags">"  />
-      <input type="submit" value="Submit">
+   <div id="content-wrap">
+      <div class="row">
+         <div id="main" >
+            <form action="<TMPL_VAR name = "submit_command">" method="post">   
+               <input type="text" name="title" id="title" value="<TMPL_VAR name = "blog_title">"  /><br>
+               <input type="hidden" name="blog_id" id="blog_id" value="<TMPL_VAR name = "blog_id">" />
+               <input type="hidden" name="CSB" value="<TMPL_VAR name = "CSB">" />
+               <textarea name="content" id="content" >hi there</textarea>
+               <TMPL_VAR name = "category_combo"> 
+               <input type="text" name="search_tags" id="search_tags" value="<TMPL_VAR name = "search_tags">"  />
+               <input type="submit" value="Submit">
 
-   </form>
+            </form>
+         </div>
+      </div>
+   </div>      
    <script>
-         ClassicEditor
-             .create( document.querySelector( '#content' ),
-               {
-                  toolbar: [ 'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 
-                           'numberedList', 'blockQuote' ],
-                  heading: {
-                     options: [
-                        { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
-                        { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
-                        { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' }
-                     ]
-                  }
-               }
-              )
-             .catch( error => {
-                 console.error( error );
-             } );
-     </script>
+      tinymce.init({
+        selector:'textarea',
+        file_picker_types: 'file image media',
+        images_upload_url: 'file_upload',
+        
+        automatic_uploads: true,
+        plugins: 'a11ychecker advcode casechange formatpainter linkchecker lists checklist media mediaembed pageembed permanentpen powerpaste table advtable image tinymcespellchecker',
+        toolbar: 'a11ycheck addcomment showcomments casechange checklist code formatpainter insertfile image imagetools pageembed permanentpen table',
+        toolbar_drawer: 'floating',
+   
+        
+      });
+   </script>
 
-    <!-- Footer
-   ================================================== -->
+    <!-- Footer ================================================== -->
    </body>
-<TMPL_INCLUDE name="js.html"/>

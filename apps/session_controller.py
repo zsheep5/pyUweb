@@ -210,8 +210,8 @@ def load_session(p_session_id = None, APPSTACK={}, ENVIRO={}, CLIENT_STATE={}):
                 if CLIENT_STATE['last_command'] == 'retry':
                     CLIENT_STATE.update({'last_command':'retry'})
                     CLIENT_STATE.update({'prev_state':{}})
-                CLIENT_STATE.update({'session_id':int(_session_cookie.value)})
-                return True, CLIENT_STATE, _session_cookie
+                #CLIENT_STATE.update({'session_id':int(_session_cookie.value)})
+                return True, CLIENT_STATE, _sec, _session_cookie
         elif _timeout > _ctime:
             _results, _sec = load_credentials(psession_id =int(p_session_id.value), ENVIRO=ENVIRO )
             if len(CLIENT_STATE.get('last_command','')) > 0:

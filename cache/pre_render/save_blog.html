@@ -6,8 +6,10 @@
 <head>
    	<!-- Java Script
    ================================================== -->
-   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5/ckeditor.js"> </script>
-  <!-- <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
+   <!--
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5-build-classic/build/ckeditor.js"> 
+   <!-- <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
+   <script src="https://cdn.tiny.cloud/1/hdjwdfr5sjn15d1gc78dbcb84qvnl901dt44ffrmj0xm0814/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
    <script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"></script>
    <!--<script>window.jQuery || document.write('<script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"><\/script>')</script> -->
    <script src="<TMPL_VAR name="STATIC.furlpath">/js/main.js"></script>
@@ -15,7 +17,7 @@
    <!--- Basic Page Needs
    ================================================== -->
     <meta charset="utf-8">
-	<title><TMPL_VAR name=""></title>
+	<title><TMPL_VAR name="SITE_NAME"></title>
 	<meta name="<TMPL_VAR name="">" content="">  
 	<meta name="<TMPL_VAR name="">" content="">
 
@@ -42,10 +44,9 @@
    	<div class="row">
    		<div class="header-content twelve columns">
 
-		      <h1 id="logo-text"><a href="/" title="">zSheep Blog</a></h1>
-				<p id="intro"><TMPL_VAR name="SITE_NAME"></p>
+		      <h1 id="logo-text"><a href="/" title=""><TMPL_VAR name="PAGE_NAME"></a></h1>
+				<!--<p id="intro"><TMPL_VAR name="PAGE_NAME"></p>-->
 		</div>			
-
 	</div>
 	<nav id="nav-wrap"> 
 	   <a class="mobile-btn" href="#nav-wrap" title="Show navigation">Show Menu</a>
@@ -53,24 +54,19 @@
 	   	<div class="row">    		            
 			   	<ul id="nav" class="nav">
 						<li><a href="view">Home</a></li>
-							<TMPL_IF name="SEC.USER_LOGGEDIN" value="True">
-								<li class="has-children"><a href="#">User Tools</a>
-									<ul>
-										<li><a href="/new_blog">New Blog</a></li>
-										<li><a href="#">List Of Bogs</a></li>
-										<li><a href="#"></a></li>
-									</ul>
-								</li>
-							</TMPL_IF>
-	               
-	               <li><a href="demo.html">Demo</a></li>	
-	               <li><a href="archives.html">Archives</a></li>
-			      	<li class="has-children current"><a href="single.html">Blog</a>
-							<ul>
-	                     <li><a href="blog.html">Blog Entries</a></li>
-	                     <li><a href="single.html">Single Blog</a></li>	                     
-	                  </ul>
-					  </li>	
+						<TMPL_IF name="SEC.USER_LOGGEDIN" value="True">
+							<li class="has-children"><a href="#">User Tools</a>
+								<ul>
+									<li><a href="/new_blog">New Blog</a></li>
+									<li><a href="#">List Of Bogs</a></li>
+								</ul>
+							</li>
+						</TMPL_IF>
+	               	
+	                <li><a href="list">List of Blogs</a></li>
+			      	<li><a href="cats">Categories</a>
+
+					</li>	
 					<TMPL_IF name="SEC.USER_LOGGEDIN" value="True"> 
 							<li><a href="log_out">Log out <TMPL_VAR name="SEC.DISPLAY_NAME"> </a></li>
 					<TMPL_ELSE>
@@ -95,40 +91,34 @@
 						
 						<div class="entry-meta">
 							<ul>
-								<li>July 11, 2014</li>
+								<li><TMPL_VAR name="blog.blog_date"></li>
 								<span class="meta-sep">&bull;</span>							
 								<li>
-									<a href="#" title="" rel="category tag">Wordpress</a>,
-									<a href="#" title="" rel="category tag">Ghost</a>  
+									<TMPL_LOOP name="blog.list_tags">
+										<a href="#" title="" rel="category tag"><TMPL_VAR name="list_tags"></a>,
+									</TMPL_LOOP>
+									
 								</li>
-								<span class="meta-sep">&bull;</span>
-								<li>Jane Doe</li>
 							</ul>
 						</div> 
 				 
 					</header> 
 				
-					<div class="entry-content-media">
-						<div class="post-thumb">
+					<!--<div class="entry-content-media">
+						 <div class="post-thumb">
 							<img src="<TMPL_VAR name="IMAGES.furlpath">/m-farmerboy.jpg">
 						</div> 
 					</div>
+					-->
 
 					<div class="entry-content">
-						<TMPL_VAR name="blog.blog_user">
-						<TMPL_VAR name="blog.blog_id">
-						<TMPL_VAR name="blog.blog_htmltext">
-						<TMPL_VAR name="blog.search_tags">						
+						<TMPL_VAR name="blog.blog_htmltext">						
 					</div>
 
-					<p class="tags">
-  			         <span>Tagged in </span>:
-  				      <a href="#">orci</a>, <a href="#">lectus</a>, <a href="#">varius</a>, <a href="#">turpis</a>
-  			       </p> 
 
   			       <ul class="post-nav group">
-  			            <li class="prev"><a rel="prev" href="#"><strong>Previous Article</strong> Duis Sed Odio Sit Amet Nibh Vulputate</a></li>
-  				         <li class="next"><a rel="next" href="#"><strong>Next Article</strong> Morbi Elit Consequat Ipsum</a></li>
+  			            <li class="prev"><TMPL_VAR name="newer.url"></TMPL_VAR></li>
+  				         <li class="next"><TMPL_VAR name="older.url"></li>
   			        </ul>
 
 				</article>
@@ -267,7 +257,6 @@
 
             <div class="message group">
                 <label  for="title">Title <span class="required">*</span></label>
-                <input type="text" name="title" id="tile" > <br>
                 <label  for="comment">Message <span class="required">*</span></label>
                 <textarea name="comment"  id="comment" rows="10" cols="50" ></textarea>
             </div>
@@ -300,11 +289,11 @@
         <h3>Blog Categories.</h3> 
             <ul>
                 <TMPL_LOOP name="category">
-                    <li><a href="<TMPL_VAR name="cat_url">" title=""><TMPL_VAR name="cat_name"></a>(<TMPL_VAR name="cat_count">) </li>						
+                    <li><TMPL_VAR name="url" ></li>						
                 </TMPL_LOOP>
             </ul>
     </div>
-
+<!--
     <div class="widget widget_text group">
         <h3>Widget Text.</h3>
 
@@ -318,14 +307,14 @@
             <a href="#">holder text for tags</a>
         </div>     
     </div>
-
+-->
     <div class="widget widget_popular">
         <h3>Popular Post.</h3>
 
         <ul class="link-list">
-            <TMPL_loop name="tops">
-                <li><a href="<TMPL_VAR name="tops_url">"><TMPL_VAR name='blog_title'></a></li>
-            </TMPL_loop>                   
+            <TMPL_LOOP name="tops">
+                <li><TMPL_VAR name="url"></li>
+            </TMPL_LOOP>                   
         </ul>
             
     </div>
@@ -343,8 +332,10 @@
    
 		<!-- Java Script
    ================================================== -->
-   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5/ckeditor.js"> </script>
-  <!-- <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
+   <!--
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5-build-classic/build/ckeditor.js"> 
+   <!-- <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
+   <script src="https://cdn.tiny.cloud/1/hdjwdfr5sjn15d1gc78dbcb84qvnl901dt44ffrmj0xm0814/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
    <script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"></script>
    <!--<script>window.jQuery || document.write('<script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"><\/script>')</script> -->
    <script src="<TMPL_VAR name="STATIC.furlpath">/js/main.js"></script>

@@ -6,8 +6,10 @@
 <head>
    	<!-- Java Script
    ================================================== -->
-   <script src="http://localhost:8080/static/js/ckeditor5/ckeditor.js"> </script>
-  <!-- <script src="http://localhost:8080/static/js/modernizr.js"> </script>-->
+   <!--
+   <script src="http://localhost:8080/static/js/ckeditor5-build-classic/build/ckeditor.js"> 
+   <!-- <script src="http://localhost:8080/static/js/modernizr.js"> </script>-->
+   <script src="https://cdn.tiny.cloud/1/hdjwdfr5sjn15d1gc78dbcb84qvnl901dt44ffrmj0xm0814/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
    <script src="http://localhost:8080/static/js/jquery-3.4.1.js"></script>
    <!--<script>window.jQuery || document.write('<script src="http://localhost:8080/static/js/jquery-3.4.1.js"><\/script>')</script> -->
    <script src="http://localhost:8080/static/js/main.js"></script>
@@ -15,7 +17,7 @@
    <!--- Basic Page Needs
    ================================================== -->
     <meta charset="utf-8">
-	<title>Tag Name not Found in Context</title>
+	<title>zSheep Blog</title>
 	<meta name="Tag Name not Found in Context" content="">  
 	<meta name="Tag Name not Found in Context" content="">
 
@@ -42,10 +44,9 @@
    	<div class="row">
    		<div class="header-content twelve columns">
 
-		      <h1 id="logo-text"><a href="/" title="">zSheep Blog</a></h1>
-				<p id="intro">zSheep Blog</p>
+		      <h1 id="logo-text"><a href="/" title="">zSheep's Blog</a></h1>
+				<!--<p id="intro">zSheep's Blog</p>-->
 		</div>			
-
 	</div>
 	<nav id="nav-wrap"> 
 	   <a class="mobile-btn" href="#nav-wrap" title="Show navigation">Show Menu</a>
@@ -53,24 +54,19 @@
 	   	<div class="row">    		            
 			   	<ul id="nav" class="nav">
 						<li><a href="view">Home</a></li>
-							
-								<li class="has-children"><a href="#">User Tools</a>
-									<ul>
-										<li><a href="/new_blog">New Blog</a></li>
-										<li><a href="#">List Of Bogs</a></li>
-										<li><a href="#"></a></li>
-									</ul>
-								</li>
-							
-	               
-	               <li><a href="demo.html">Demo</a></li>	
-	               <li><a href="archives.html">Archives</a></li>
-			      	<li class="has-children current"><a href="single.html">Blog</a>
-							<ul>
-	                     <li><a href="blog.html">Blog Entries</a></li>
-	                     <li><a href="single.html">Single Blog</a></li>	                     
-	                  </ul>
-					  </li>	
+						
+							<li class="has-children"><a href="#">User Tools</a>
+								<ul>
+									<li><a href="/new_blog">New Blog</a></li>
+									<li><a href="#">List Of Bogs</a></li>
+								</ul>
+							</li>
+						
+	               	
+	                <li><a href="list">List of Blogs</a></li>
+			      	<li><a href="cats">Categories</a>
+
+					</li>	
 					 
 							<li><a href="log_out">Log out zsheep                           </a></li>
 					
@@ -88,45 +84,40 @@
 					<header class="entry-header">
 
 						<h2 class="entry-title">
-							something to test                                                               
+							test ing                                                                        
 						</h2> 				 
 						
 						<div class="entry-meta">
 							<ul>
-								<li>July 11, 2014</li>
+								<li>2020-01-30</li>
 								<span class="meta-sep">&bull;</span>							
 								<li>
-									<a href="#" title="" rel="category tag">Wordpress</a>,
-									<a href="#" title="" rel="category tag">Ghost</a>  
+									
+										<a href="#" title="" rel="category tag">test things</a>,
+									
+									
 								</li>
-								<span class="meta-sep">&bull;</span>
-								<li>Jane Doe</li>
 							</ul>
 						</div> 
 				 
 					</header> 
 				
-					<div class="entry-content-media">
-						<div class="post-thumb">
+					<!--<div class="entry-content-media">
+						 <div class="post-thumb">
 							<img src="http://localhost:8080/static/images/m-farmerboy.jpg">
 						</div> 
 					</div>
+					-->
 
 					<div class="entry-content">
-						Tag Name not Found in Context
-						72
-						<p>lets see here</p>
-						oh<br> joy<br> pain 						
+						<p>Lets see how things progress with this</p>
+<p><img src="/static/images/14_Untitled.png" alt="" width="316" height="316" /></p>						
 					</div>
 
-					<p class="tags">
-  			         <span>Tagged in </span>:
-  				      <a href="#">orci</a>, <a href="#">lectus</a>, <a href="#">varius</a>, <a href="#">turpis</a>
-  			       </p> 
 
   			       <ul class="post-nav group">
-  			            <li class="prev"><a rel="prev" href="#"><strong>Previous Article</strong> Duis Sed Odio Sit Amet Nibh Vulputate</a></li>
-  				         <li class="next"><a rel="next" href="#"><strong>Next Article</strong> Morbi Elit Consequat Ipsum</a></li>
+  			            <li class="prev">Tag Name not Found in Context</TMPL_VAR></li>
+  				         <li class="next"><a href="http://localhost:8080/view?blog_id=96">Anew Blog                                                                       </a></li>
   			        </ul>
 
 				</article>
@@ -158,7 +149,6 @@
 
             <div class="message group">
                 <label  for="title">Title <span class="required">*</span></label>
-                <input type="text" name="title" id="tile" > <br>
                 <label  for="comment">Message <span class="required">*</span></label>
                 <textarea name="comment"  id="comment" rows="10" cols="50" ></textarea>
             </div>
@@ -191,19 +181,19 @@
         <h3>Blog Categories.</h3> 
             <ul>
                 
-                    <li><a href="http://localhost:8080/view_category%3Fid%3D2">Python Code 0</a></li>						
+                    <li><a href="http://localhost:8080/view_category%3Fcat_id%3D2">Python Code 0</a></li>						
                 
-                    <li><a href="http://localhost:8080/view_category%3Fid%3D5">Animals, gardening and other 0</a></li>						
+                    <li><a href="http://localhost:8080/view_category%3Fcat_id%3D5">Animals, gardening and other 0</a></li>						
                 
-                    <li><a href="http://localhost:8080/view_category%3Fid%3D4">On Going Work to get offgrid 0</a></li>						
+                    <li><a href="http://localhost:8080/view_category%3Fcat_id%3D4">On Going Work to get offgrid 0</a></li>						
                 
-                    <li><a href="http://localhost:8080/view_category%3Fid%3D1">Comments & Programs regarding Postgresql 0</a></li>						
+                    <li><a href="http://localhost:8080/view_category%3Fcat_id%3D1">Comments & Programs regarding Postgresql 0</a></li>						
                 
-                    <li><a href="http://localhost:8080/view_category%3Fid%3D3">Journal of throughts 0</a></li>						
+                    <li><a href="http://localhost:8080/view_category%3Fcat_id%3D3">Journal of throughts 0</a></li>						
                 
             </ul>
     </div>
-
+<!--
     <div class="widget widget_text group">
         <h3>Widget Text.</h3>
 
@@ -217,7 +207,7 @@
             <a href="#">holder text for tags</a>
         </div>     
     </div>
-
+-->
     <div class="widget widget_popular">
         <h3>Popular Post.</h3>
 
@@ -240,8 +230,10 @@
    
 		<!-- Java Script
    ================================================== -->
-   <script src="http://localhost:8080/static/js/ckeditor5/ckeditor.js"> </script>
-  <!-- <script src="http://localhost:8080/static/js/modernizr.js"> </script>-->
+   <!--
+   <script src="http://localhost:8080/static/js/ckeditor5-build-classic/build/ckeditor.js"> 
+   <!-- <script src="http://localhost:8080/static/js/modernizr.js"> </script>-->
+   <script src="https://cdn.tiny.cloud/1/hdjwdfr5sjn15d1gc78dbcb84qvnl901dt44ffrmj0xm0814/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
    <script src="http://localhost:8080/static/js/jquery-3.4.1.js"></script>
    <!--<script>window.jQuery || document.write('<script src="http://localhost:8080/static/js/jquery-3.4.1.js"><\/script>')</script> -->
    <script src="http://localhost:8080/static/js/main.js"></script>

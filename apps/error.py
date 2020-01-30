@@ -4,23 +4,17 @@ import session_controller as sc
 import traceback, sys, os
 
 
-def dump_secured_error_stack():
-    return {'Dump':dump_globals()}
-
-def dump_unsecured_error_stack():
-    return 'An Error occured and can process your request'
-
-
-def dump_globals():  ##convert the globals So there easy to print out HTML rendering engine
+### not used anymore these varaibles are no longer globals 
+"""def dump_globals(g={}):  ##convert the globals So there easy to print out HTML rendering engine
     output = 'WebServer_ENVIRO \r\n'
     for key, value in sorted(g.APACHE_ENVIRO.items()):
         if value is not None:
-            output += "%s %s \r\n " %(key,value)
+            output += "%s %s \r\n " %(key, value)
     
     output += "\r\nAltered HTTP HEADERS \r\n "
     for key, value in sorted(g.HEADERS.items()):
         if value is not None:
-            output += "%s %s \r\n " %(key,value)
+            output += "%s %s \r\n " %(key, value)
     
     output += "\r\nCookies  \r\n "
     if len(g.COOKIES):
@@ -30,25 +24,25 @@ def dump_globals():  ##convert the globals So there easy to print out HTML rende
     output += "\r\n \r\n APPLICATION ENVIROMENT \r\n"
     for key, value in  sorted(g.ENVIRO.items()):
         if value is not None:
-            output += "%s:%s \r\n " %(key,value)
+            output += "%s:%s \r\n " %(key, value)
 
     if len(g.POST) > 0:
-        output += "\r\n Converted POST commands\r\n" 
+        output += "\r\n Converted POST commands\r\n"
         for key, value in sorted(g.POST.items()):
             if value is not None:
-                output += "%s:%s \r\n" %(key,value)
+                output += "%s:%s \r\n" %(key, value)
 
     if len(g.GET) > 0:
         output += "\r\n Converted GET commands\r\n" 
         for key, value in sorted(g.GET.items()):
             if value is not None :
-                output += "%s:%s \r\n" %(key,value)
+                output += "%s:%s \r\n" %(key, value)
 
     if len(g.CONTEXT) > 0:
         output += "\r\n context\r\n" 
         for key, value in sorted(g.CONTEXT.items()):
             if value is not None and type(value) not in (list, dict, tuple) :
-                output += "%s:%s \r\n" %(key,value)
+                output += "%s:%s \r\n" %(key, value)
     
     if len(g.COOKIES) > 0:
         output += "\r\n Cookies\r\n" 
@@ -58,13 +52,13 @@ def dump_globals():  ##convert the globals So there easy to print out HTML rende
         output += "\r\n Application Stack\r\n" 
         for key, value in sorted(g.APPSTACK.items()):
             if value is not None:
-                output += "%s:%s \r\n" %(key,value)
+                output += "%s:%s \r\n" %(key, value)
 
     if len(g.TEMPLATE_STACK) > 0:
         output += "\r\n Template Stack\r\n" 
         for key, value in sorted(g.TEMPLATE_STACK.items()):
             if value is not None:
-                output += "%s:%s \r\n" %(key,value)
+                output += "%s:%s \r\n" %(key, value)
     
     if len(g.ERRORSTACK):
         output += "\r\n Error Stack:\r\n"
@@ -75,7 +69,7 @@ def dump_globals():  ##convert the globals So there easy to print out HTML rende
     output += "Security Context is not dumped \r\n"
 
     return output
-
+"""
 def show_errors(et='', pe=None, ENVIRO={}, TEMPLATE_ENGINE=None, 
             POST={}, 
             GET={}, 
@@ -105,16 +99,16 @@ def show_errors(et='', pe=None, ENVIRO={}, TEMPLATE_ENGINE=None,
     _context.update(_post)
     _context.update(_get)
     _context.update({'CALL_STACK':tb_list_of_dicts('ERROR_STACK', _eslist)})
-    _context.update({'EXCEPTION_CLASS_NAME:':repr(pe)})
+    _context.update({'EXCEPTION_CLASS_NAME':str(pe.__class__)})
     _context.update({'EXCEPTION':str(pe)})
     _context.update({'CALL_STACK_LENGTH':len(_eslist)+1})
     _context.update({'POST_LENGTH':len(_post)+1})
     _context.update({'GET_LENGTH':len(_get)+1})
-    _output = TEMPLATE_ENGINE( pfile = et, 
-                    ptype = 'string',
-                    pcontext =_context, 
-                    preturn_type = 'string',
-                    pcache_path = ENVIRO.get('TEMPLATE_CACHE_PATH_POST_RENDER', os.getcwd())
+    _output = TEMPLATE_ENGINE(pfile=et, 
+                    ptype='string',
+                    pcontext=_context, 
+                    preturn_type='string',
+                    pcache_path=ENVIRO.get('TEMPLATE_CACHE_PATH_POST_RENDER', os.getcwd())
                 )
     return True, _output
 
@@ -123,12 +117,3 @@ def tb_list_of_dicts(pkey, plist):
     for _i in plist:
         _rldic.append({pkey:_i})
     return _rldic
-
-def load_render_error_template(pcontext, pt):
-    if m.build_template('error', g.TEMPLATE_STACK.get('error'), False):
-        _ef = g.ENVIRO['TEMPLATE_CACHE_PATH'] + 'error' + g.TEMPALATE_EXTENSION
-        return g.TEMPLATE_ENGINE(_ef,
-                pcontext,
-                g.ENVIRO.get('TEMPLATE_TYPE', ''), 
-                g.ENVIRO.get('TEMPLATE_TMP_PATH', '')
-            )
