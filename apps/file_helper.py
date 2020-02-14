@@ -61,7 +61,6 @@ def dump_files_to_disk(p_con=None, p_path=''):
         _temp.close
     return True
 
-
 def upload_file(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, COOKIES={}, CONTEXT={}, TEMPLATE='', TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
     CONTEXT.update({'PAGE_NAME':"Image Uploading"})
     _data = b''

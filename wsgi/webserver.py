@@ -31,6 +31,10 @@ def parse_args(p_argv):
         help='function to link to  webserver to', metavar='SCRIPT_NAME')
     _paser.add_option('-t', '--threads', dest="threads", default=1, type='int',
         help= 'Number of background responds threads created.')
+    _paser.add_option('-r', '--path_render_engine', dest="pre", default='', 
+        help= 'path to template engine')
+    _paser.add_option('-n', '--name_render_engine', dest="re", default='', 
+        help= 'naem of the template engine to import')
 
     (options, args) = _paser.parse_args(p_argv)
 
@@ -44,12 +48,6 @@ if __name__ == "__main__":
         ap = getattr(ar, options.func)
         serve(ap, host=options.ip, port= options.port, threads=options.threads)
 
-        """for key, value in sorted(_as.items()):  ##need to convert the app stack in dispatch for wsgiserver
-            _dis.update( { '/' + key: ap})
-        _d = wsgiserver.WSGIPathInfoDispatcher(_dis)
-        server = wsgiserver.WSGIServer(_d, host=options.ip, port=options.port, numthreads=1)
-        server.start()
-        """
     else:
         print('failed to start')
 

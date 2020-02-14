@@ -15,18 +15,23 @@ import apps.session_controller as session
 # if all are true it then searches for the app to be called then processes it
 #      
 def kick_start(enviro, start_response):
-    #from importlib import reload
+    
     import config as g 
-    #reload(g)
+    import template_stack as ts
+    import app_stack 
+
     ENVIRO =g.get_enviro()
     ENVIRO.update({'APPSTACK':g.APPSTACK})
-    ENVIRO.update({'SEC': g.SEC}) ##start with the basic SEC skeleton
+    ENVIRO.update({'SEC': g.SEC()}) ##start with the basic SEC skeleton
     POST={}
     GET={} 
-    CLIENT_STATE={}
+    CLIENT_STATE=g.get_cs()
     COOKIES=COOKIES={}
     CONTEXT={}
     CSB=''
+    TEMPLATE_STACK = ts.get_ts()
+    CAPPSTACK = app_stack.get_as()
+    TEMPLATE_ENGINE=g.get_te()
     try :
         if not check_paths(ENVIRO):
             return server_respond(pstatus='500 ', 
@@ -34,14 +39,21 @@ def kick_start(enviro, start_response):
                 sr=start_response)
         else:
             append_to_sys_path(ENVIRO)
-        _r, con = connect_to_db(pwd='123456')
+        _r, con = connect_to_db(host='db-server.magwerks.com', 
+                    db='Magwerks', 
+                    user='justin', 
+                    pwd='Usex030731', 
+                    port=5432, 
+                    driver='Postgresql',
+                    named_for_connection='Cal_Website')
+        #_r, con = connect_to_db(pwd='123456')
         ENVIRO.update({'CONN':con})
         
         if not _r:
             return server_respond(pstatus='500 ', 
                 poutput='Can not connect to the Database', pre=None,
                 sr=start_response)
-        _results, ENVIRO, POST, GET, CSB, APPSTACK, COOKIES, CLIENT_STATE = load_enviro(enviro, ENVIRO=ENVIRO, APPSTACK=g.APPSTACK, CLIENT_STATE=g.CLIENT_STATE)
+        _results, ENVIRO, POST, GET, CSB, APPSTACK, COOKIES, CLIENT_STATE = load_enviro(enviro, ENVIRO=ENVIRO, APPSTACK=CAPPSTACK, CLIENT_STATE=CLIENT_STATE)
         if not check_SSL(enviro, ENVIRO):
             return server_respond(pstatus='500 ', 
                 poutput='SSL Check failure', pre=None, sr=start_response)
@@ -55,9 +67,9 @@ def kick_start(enviro, start_response):
             set_static_file_cache_header(ENVIRO=ENVIRO)
             return server_respondf(pstatus='200 ', 
                 pheaders=ENVIRO.get('HEADERS'),
-                poutput= _output,
+                poutput=_output,
                 sr=start_response,
-                pserver_enviro = enviro,
+                pserver_enviro=enviro,
                 ENVIRO=ENVIRO 
                 )
         else: 
@@ -86,8 +98,8 @@ def kick_start(enviro, start_response):
                     CONTEXT={},
                     CSB=CSB,
                     TEMPLATE='', 
-                    TEMPLATE_ENGINE=g.TEMPLATE_ENGINE,
-                    TEMPLATE_STACK = g.TEMPLATE_STACK,
+                    TEMPLATE_ENGINE=TEMPLATE_ENGINE,
+                    TEMPLATE_STACK = TEMPLATE_STACK,
                     MEMCACHE=g.MEMCACHE
                 )
             if _test:
@@ -104,10 +116,10 @@ def kick_start(enviro, start_response):
                 run_pyapp()
     except Exception as _e:
         #catch any exception if the error template is setup return result to the client if not rethrow exception
-        _ea = g.APPSTACK.get("error")
-        _et = g.TEMPLATE_STACK.get(_ea.get('template_stack'))
+        _ea = CAPPSTACK.get("error")
+        _et = TEMPLATE_STACK.get(_ea.get('template_stack'))
         if _ea and _et : 
-            _results, _output = error_catcher(_ea, _et, _e, ENVIRO=ENVIRO, TEMPLATE_ENGINE=g.TEMPLATE_ENGINE,
+            _results, _output = error_catcher(_ea, _et, _e, ENVIRO=ENVIRO, TEMPLATE_ENGINE=TEMPLATE_ENGINE,
                 POST=POST, GET=GET, CLIENT_STATE=CLIENT_STATE, COOKIES=COOKIES, CONTEXT={},
                 CSB=CSB, TEMPLATE='')
             return server_respond(pstatus='500',
@@ -390,7 +402,7 @@ def run_pyapp(papp_filename='',
         error('Not Critical: recieved a false state from the app ', ENVIRO=ENVIRO)
         return True, '', ENVIRO, CLIENT_STATE, COOKIES, CSB
     else:
-        error('Error could not find  %s command in %s '%(papp_command, papp_filename), '' , ENVIRO=ENVIRO)    
+        raise Exception('Error could not find  %s command in %s '%(papp_command, papp_filename))    
 
     return False, '',  ENVIRO, CLIENT_STATE, COOKIES, CSB
 
@@ -761,7 +773,6 @@ def parse_mdf_header(plist=[]):
             if len(cc2)>1: 
                 _r.update({cc2[0].strip():cc2[1].replace('"', '')})
     return _r
-
 
 def parse_GET(web_enviro, GET={}, CSB='', ENVIRO={}):
     if 'REQUEST_URI' in web_enviro :

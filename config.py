@@ -49,7 +49,8 @@ base_directory = '/home/MAGWERKS.COM/justin/github/pyUweb/'
 
 
 
-SEC={
+def SEC():
+    return {
     'REQUIRE_LOGGIN':False,
     'SSL_REQUIRE':False,
     'USER_LOGGEDIN':False,
@@ -64,12 +65,12 @@ SEC={
     'USER_GROUP':[{'group_name': True}],
     'USER_TIMER':60000,
 }
-
-CLIENT_STATE = {
+def get_cs():
+    return {
         'last_command':'',
         'prev_state':'',
         'USER_ID':'',
-        'TIMEOUT':datetime.utcnow() + timedelta(seconds=SEC['USER_TIMER']),
+        'TIMEOUT':datetime.utcnow() + timedelta(seconds=60000),
         'session_id':'',
         }
 def get_enviro():
@@ -83,7 +84,7 @@ def get_enviro():
     'MEMCACHE_USE':False, 
     'APP_NAME':'/', #default to root this is the app name for the app_stack dictionary 
     'PROTOCOL':'http',
-    'SITE_NAME':'zSheep Blog',
+    'SITE_NAME':'Magwerks Service Website',
     'SCRIPT_NAME':'',
     'URI_PATH': '',
     'SERVER_NAME':'',
@@ -107,7 +108,9 @@ def get_enviro():
         },
     'ALLOWED_HOST_NAMES': ['localhost', '127.0.0.1', 'g-server', '192.168.1.72'],
     'APPS_PATH':(base_directory+'apps',),
-    'USING_WAITRESS':True
+    'USING_WAITRESS':True,
+    'CAPTICHA_client_key': '6LcMYdQUAAAAAPn2Z6HFBKoVPNApIyhe5stGMQWZ',
+    'CAPTICHA_server_key': '6LcMYdQUAAAAAK-3eKpSJXsU0s4Zwq8VEITzmas2',
     }
 
 ERRORSTACK =[]
@@ -120,205 +123,29 @@ if ENVIRO['MEMCACHE_USE']:
     from pymemcache.client import mem
     MEMCACHE = mem.Client(('localhost', 11211))
 """
-import sys
-sys.path.append('/home/MAGWERKS.COM/justin/github/ptython_HTE/')
-#_loca = importlib.util.spec_from_file_location('python_html_parser', '../ptyhon_HTE/')
-import python_html_parser  #default template engine
 
-TEMPLATE_ENGINE = python_html_parser.render_html  #map the function to this global 
+def get_te(path=''):
+    import sys
+    sys.path.append('/home/MAGWERKS.COM/justin/github/ptython_HTE/')
+    #_loca = importlib.util.spec_from_file_location('python_html_parser', '../ptyhon_HTE/')
+    import python_html_parser  #default template engine
+
+    return python_html_parser.render_html  #map the function to this global 
 TEMPLATE_TO_RENDER = '' ##
-##from APPS_PATH.sanitizers as sans
-##INPUT_SANITIZER = sans.
-##HTML_SANITIZER =    
+
 
 CONN={}
 
-"""APPSTACK layout and logic
- mapping app name and app function to physical/relative path 
- on the server and if login is require
- idea here is the be able to have the code outside apache path 
- { App_name the url post/get: 
-   { filename: "python_file":, 
-     path: 'path to the file'  
-     command:"function to call in python file" 
-     security: bool,
-     content_type: typicaly text/html  this is used by the http client know the type data that was sent 
-     server_cache_on: if true tells the rendering engine not process the app but to send cache result
-     server_cache_age: the age in seconds on the cache before the server will render the results. 
-     client_cacheability: allows part of app to be set its respons as cacheable and the method used 
-     client_cache_age:30:
 
-   }
- }
- idea is to be similar to django urls function without the use of regular expressions to match url to functions
- after the enviroment is setup match_url_to_app is run 
-"""
-APPSTACK = {
-    '/':{ 'template_stack':'view',
-            'filename':'blog', 
-            'path':'.',
-            'command':'view' , 
-            'security':False,
-            'content_type': 'text/html',
-            'server_cache_on':True,
-            'server_cache_age':30,
-            'client_cacheability':'private',
-            'cache_age':30,
-            },
-    'view':{'template_stack':"view", 
-            'filename':'blog', 
-            'path':'.', 
-            'command':'view',
-            'security':False,
-            'content_type':'text/html',
-            'server_cache_on':True,
-            'server_cache_age':30,
-            'client_cacheability':'private',
-            'cache_age':30,    
-            },
-    'list_category':{'template_stack':"list_cats", 
-            'filename':'blog', 
-            'path':'.', 
-            'command':'list_category',
-            'security':False,
-            'content_type':'text/html',
-            'server_cache_on':True,
-            'server_cache_age':30,
-            'client_cacheability':'private',
-            'client_cache_age':30,
-            },
-    'search_blog':{
-            'template_stack':'list', 
-            'filename':'blog', 
-            'path':'.', 
-            'command':'search',
-            'security':False,
-            'content_type': 'text/html',
-            'server_cache_on':True,
-            'server_cache_age':30,
-            'client_cacheability':'private',
-            'cache_age':30,
-            },
-    'edit_blog':{'filename':'blog', 
-              'template_stack':'blog_editor',
-              'path':'.',
-              'command':'edit_blog', 
-              'security':True,
-              'content_type': 'text/html',
-              },
-    'new_blog':{'filename':'blog', 
-              'template_stack':'blog_editor',
-              'path':'.',
-              'command':'new_blog', 
-              'security':True,
-              'content_type': 'text/html',
-              },
-    'save_blog':{'filename':'blog', 
-              'template_stack':'view',
-              'path':'.',
-              'command':'save_blog', 
-              'security':True,
-              'content_type': 'text/html',
-              },
-    'blog_comment':{'template_stack':'view',
-                    'filename':'blog_comment', 
-                    'path':'.',
-                    'command':'init', 
-                    'security':False,
-                    'content_type': 'text/html',
-                    },
-    'create_account':{'template_stack':'view', 
-                      'filename':'ca', 
-                      'path':'.', 
-                      'command':'init', 
-                      'security':True,
-                      'content_type': 'text/html',
-                    },
-    'log_in':{'template_stack':'log_in',
-             'filename':'session_controller', 
-             'path':'.', 
-             'command':'log_in', 
-             'security':False,
-             'content_type': 'text/html',
-             },
-    'admin':{'template_stack':'view',
-             'filename':'admin', 
-             'path':'.', 
-             'command':'init', 
-             'security':True,
-             'content_type': 'text/html',
-             },
-    'file_view':{'template_stack':'view',
-                  'filename':'file_helper', 
-                  'path':'.', 
-                  'command':'list_files', 
-                  'security':False,
-                  'content_type': 'text/html',
-            },
-    'file_upload':{'template_stack':'file',
-                  'filename':'file_helper', 
-                  'path':'.', 
-                  'command':'upload_file', 
-                  'security':False,
-                  'content_type': 'text/html',
-            },
-    'error':{'template_stack':'error',
-                  'filename':'error', 
-                  'path':'.', 
-                  'command':'show_errors', 
-                  'security':True,
-                  'content_type': 'text/html',
-            },
-}
-"""Template stack layout 
- { App_Nane / URL path relative website root
-   [ list of html files that make up template.  ]
- }
- files must be in the template_path you can do subdirs but no relative imports
- The idea here is you can include many templates to create big template prior
- to being sent to the render engine.  Ctemplate also have include function
- but the results are thrown away after every call.  building the templates this
- allows for caching the result template.  
- If templates do not use <$TEMPLATE$filename.html$TEMPLATE$>
- flag the proceeding templates are appended at the end in order they show in the list. 
- """ 
-TEMPLATE_STACK={
-    '/':['main.html', 
-            'blog.html', 
-            'blog_comments.html', 
-            'search.html'],
-    'view':['view_page.html',
-            'base.html',
-            'top_nav_bar.html',
-            'side_bar.html',
-            'comments.html',
-            'js.html'
-        ],
-    'list_cats':['list_cats.html',
-            'base.html',
-            'top_nav_bar.html',
-            'js.html'
-        ],
-    'list':['list_page.html',
-            'base.html',
-            'top_nav_bar.html',
-        ],
-    'blog_editor':['edit_blog.html',
-            'base.html',
-            'top_nav_bar.html',
-            'js.html',
-        ],
-    'log_in':['log_in.html',
-            'base.html',
-            'top_nav_bar.html',
-            'js.html'
-        ],
-    'error':['error.html'],
-    'file':['base.html',
-            'top_nav_bar.html',
-            'side_bar.html',
-            'file.html']
-}
+def CLIENT_STATE():
+    return {
+        'last_command':'',
+        'prev_state':'',
+        'USER_ID':'',
+        'TIMEOUT':datetime.utcnow() + timedelta(seconds=SEC['USER_TIMER']),
+        'session_id':'',
+        }
+
 ## the template extension is 
 
 

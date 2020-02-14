@@ -1,0 +1,27 @@
+<div id="sidebar" class="four columns">
+
+        <div class="widget widget_search">
+                <h3>Search through Certs</h3> 
+                <form action="/">
+                    <input type="text"
+                            name="search_value" 
+                            value="Search here..." 
+                            onblur="if(this.value == '') { this.value = 'Search here...'; }" 
+                            onfocus="if (this.value == 'Search here...') { this.value = ''; }" 
+                            class="text-search"
+                    >
+                    <input type="submit" value="" class="submit-search">
+                </form>
+        </div>
+    
+        <div class="widget widget_categories group">
+            <h3>Types of Certs</h3> 
+                <ul>
+                    <TMPL_LOOP name="cert_types">
+                        <li><TMPL_VAR name="calprohd_descrip" ></li>						
+                    </TMPL_LOOP>
+                </ul>
+        </div>
+
+        
+</div>

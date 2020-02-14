@@ -381,10 +381,6 @@ def set_cookie(pname='', pvalue='', pexpires=3000, pdomain=None,
         morsel['httponly'] = True
     return {name:morsel}
 
-#def new_cookie(pkey,value):
-#    COOKIES.update({pkey:value})
-#    COOKIES_to_Send.update({pkey:value})
-
 def load_cookies(pcookie_string=''):
     if pcookie_string =='' or pcookie_string is None:
         return False, {}
@@ -459,3 +455,65 @@ def set_CSB(puser_id, ENVIRO):
     CSB = uuid.uuid1().hex
     m.run_sql_command(ENVIRO.get('CONN'), q_str,{'session_id':str(puser_id)+ CSB})
     return CSB
+
+def update_security(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
+                COOKIES={}, CONTEXT={}, TEMPLATE='', 
+                TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
+    pass
+
+def show_users_groups(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
+                COOKIES={}, CONTEXT={}, TEMPLATE='', 
+                TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
+    q_str = """Select user_id, user_name, user_last, 
+                user_email, user_pwd, user_displayname
+                from users where user_type = 'user' """
+    
+    CONTEXT.update({'users': m.run_sql_command(ENVIRO.get('CONN'), q_str)})
+
+    q_str = """Select user_id, user_name, user_last, 
+                user_email, user_pwd, user_displayname
+                from users where user_type = 'groups' """
+    
+    CONTEXT.update({'groups': m.run_sql_command(ENVIRO.get('CONN'), q_str)})
+
+    _ouput = TEMPLATE_ENGINE(pfile = TEMPLATE, 
+                            ptype = 'string',
+                            pcontext = CONTEXT, 
+                            preturn_type ='string', 
+                            pcache_path = ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER', ''))
+    return True, _ouput, ENVIRO, CLIENT_STATE, COOKIES, CSB
+
+def show_access(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
+                COOKIES={}, CONTEXT={}, TEMPLATE='', 
+                TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
+    
+    if 'key_id' in GET :
+        _key = int(''.join(GET.get('blog_id')),'-1')
+        _search_tags = ''.join(GET.get('search_tags', '')).split(',')
+        _text = ''.join(GET.get('content', ''))
+        _title = ''.join(GET.get('title', ''))
+    elif 'key_type' in POST:
+        _key = int(''.join(POST.get('blog_id','-1')))
+        _search_tags = ''.join(POST.get('search_tags', '')).split(',')
+        _text = ''.join(POST.get('content', ''))
+        _title = ''.join(POST.get('title', ''))
+    else :
+        return False, '', ENVIRO, CLIENT_STATE, COOKIES, CSB
+
+    q_str = """select sa_id, sa_allowed sa_target_id, sa_app_name, sa_app_function
+            from sec_access order by"""
+
+    CONTEXT.update({'groups': m.run_sql_command(ENVIRO.get('CONN'), q_str)})
+
+    _ouput = TEMPLATE_ENGINE(pfile = TEMPLATE, 
+                            ptype = 'string',
+                            pcontext = CONTEXT, 
+                            preturn_type ='string', 
+                            pcache_path = ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER', ''))
+    
+    return True, _ouput, ENVIRO, CLIENT_STATE, COOKIES, CSB
+
+def update_access(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
+                COOKIES={}, CONTEXT={}, TEMPLATE='', 
+                TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
+    pass

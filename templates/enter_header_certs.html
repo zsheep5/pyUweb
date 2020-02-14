@@ -1,0 +1,61 @@
+<TMPL_INCLUDE name="base.html"/>
+<body class="single">
+
+   <!-- Header
+   ================================================== -->
+	<TMPL_INCLUDE name="top_nav_bar.html"/>
+
+   <!-- Content
+   ================================================== -->
+   <div id="content-wrap">
+   	<div class="row">
+   		<div id="main" class="eight columns">
+   			<article class="entry">
+					<header class="entry-header">
+
+						<h2 class="entry-title">
+							<TMPL_VAR name="certs.calhead_id">
+						</h2> 				 
+				
+						<div class="entry-meta">
+                            <form>
+                                <input type="text">
+                                <input type="radio">
+                                <input type="submit">
+                            </form>
+							<ul>
+								<li><TMPL_VAR name="blog.blog_date"></li>
+								<span class="meta-sep">&bull;</span>							
+								<li>
+									<TMPL_LOOP name="blog.list_tags">
+										<a href="#" title="" rel="category tag"><TMPL_VAR name="list_tags"></a>,
+									</TMPL_LOOP>
+									
+								</li>
+							</ul>
+						</div> 
+				 
+					</header> 
+			
+					<div class="entry-content">
+						<TMPL_VAR name="blog.blog_htmltext">						
+                        </div>
+
+			</article>
+   		</div> <!-- main End -->
+			<TMPL_INCLUDE name="side_bar_cal.html"/>
+
+   		 <!-- end sidebar -->
+
+  		</div> <!-- end row -->
+
+   </div> <!-- end content-wrap -->   
+
+   <!-- Footer
+   ================================================== -->
+   
+	<TMPL_INCLUDE name="js.html"/>
+
+</body>
+
+</html>

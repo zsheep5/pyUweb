@@ -21,3 +21,9 @@ def html_combobox(plist=[], name='', id=''):
         for _k, _v in l.items():
             _r = _r + '<option value="'+ str(_v) + '">' + _k + '</option>' 
     return  _r + '</select>'
+
+def html_combobox_from_dic(pdic={}, name='', id=''):
+    _r = '<select id="%s" name="%s">' %(id,name)
+    for _k, _v in l.items():
+        _r = _r + '<option value="'+ str(_v) + '">' + _k + '</option>' 
+    return  _r + '</select>'

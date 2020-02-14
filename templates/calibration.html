@@ -1,0 +1,60 @@
+<!-- Header================================================== -->
+<TMPL_INCLUDE name="base.html"/>
+<TMPL_INCLUDE name="js.html"/>
+
+   <body class="single"> 
+   <TMPL_INCLUDE name="top_nav_bar_mag.html"/>
+
+<!-- Content ================================================== -->
+	     
+<div id="content-wrap">
+    <div class="row">
+        <div id="main" class="eight columns">
+            <article class="entry">
+                <header class="entry-header">
+                    
+                        <h2 class="entry-title">
+                            <TMPL_VAR name="List of Certs">
+                        </h2>
+                        <div class="entry-meta"> 		
+                        <table style="width:100%">
+                            <tr> 
+                                <th>Cert# </th>
+                                <th>Customer Name  </th>
+                                <th>Description  </th>
+                                <th>Calibrated Date  </th>
+                                <th>Calibration Due Date  </th>
+                                <th>Status</th>
+                                <th>Serial</th>
+                                <th>Edit</th>
+                                <th>Report</th>
+                            </tr>
+
+                            <TMPL_LOOP name="cal_head">
+                                <tr>
+                                    <td><TMPL_VAR name="id"></td>
+                                    <td><TMPL_VAR name="cust_name"></td>
+                                    <td><TMPL_VAR name="calprohd_descrip"></td>
+                                    <td><TMPL_VAR name="calhead_caldate"></td>
+                                    <td><TMPL_VAR name="calhead_expire"></td>
+                                    <td><TMPL_VAR name="calhead_status"></td>
+                                    <td><TMPL_VAR name="serial"></td>
+                                    <td><TMPL_VAR name="url_edit"></td>
+                                    <td><TMPL_VAR name="url_report"></td>
+                                </tr>
+                            </TMPL_LOOP>
+                                
+                        </div> 
+                    
+                </header> 
+            
+                <ul class="post-nav group">
+                    <li class="prev"><TMPL_VAR name="next.url"></TMPL_VAR></li>
+                    <li class="next"><TMPL_VAR name="prev.url"></li>
+                </ul>
+
+            </article>
+        </div>
+    </div>
+</div>
+

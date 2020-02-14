@@ -7,3 +7,12 @@
    <script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"></script>
    <!--<script>window.jQuery || document.write('<script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"><\/script>')</script> -->
    <script src="<TMPL_VAR name="STATIC.furlpath">/js/main.js"></script>
+   <script src="https://www.google.com/recaptcha/api.js?render=_reCAPTCHA_site_key"></script>
+   <script>
+      grecaptcha.ready(function() {
+         grecaptcha.execute('_reCAPTCHA_site_key_', {action: 'homepage'}).then(function(token) {
+            ...
+         });
+      });
+   </script>
+

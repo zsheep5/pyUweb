@@ -1,0 +1,35 @@
+<TMPL_INCLUDE name="base.html"/>
+<TMPL_INCLUDE name="js.html"/>
+
+<!-- Header ================================================== -->
+<body class="single"> 
+    <TMPL_INCLUDE name="top_nav_bar.html"/>
+ 
+    <!-- Content ================================================== -->
+   
+    <div id="content-wrap">
+       <div class="row">
+          <div id="main" >
+                <TMPL_LOOP name="users">
+                    <TMPL_VAR name = "blog_title">  /><br>
+                </TMPL_LOOP>    
+          </div>
+       </div>
+    </div>      
+    <script>
+       tinymce.init({
+         selector:'textarea',
+         file_picker_types: 'file image media',
+         images_upload_url: 'file_upload',
+         
+         automatic_uploads: true,
+         plugins: 'a11ychecker advcode casechange formatpainter linkchecker lists checklist media mediaembed pageembed permanentpen powerpaste table advtable image tinymcespellchecker',
+         toolbar: 'a11ycheck addcomment showcomments casechange checklist code formatpainter insertfile image imagetools pageembed permanentpen table',
+         toolbar_drawer: 'floating',
+    
+         
+       });
+    </script>
+ 
+    <!-- Footer ================================================== -->
+</body>
