@@ -15,15 +15,30 @@ def escape_html(pstring,
         pstring = pstring.replace(_k, _v)
     return pstring
 
-def html_combobox(plist=[], name='', id=''):
+def html_combobox(plist=[], name='', id='', selected=''):
     _r = '<select id="%s" name="%s">' %(id,name)
     for l in plist :
         for _k, _v in l.items():
-            _r = _r + '<option value="'+ str(_v) + '">' + _k + '</option>' 
+            _r = _r + '<option value="'+ str(_v) 
+            if selected == _v:
+                _r = _r + " " + "selected " 
+            _r = _r + '">' + _k + '</option>'
     return  _r + '</select>'
 
-def html_combobox_from_dic(pdic={}, name='', id=''):
+def html_combobox_from_dic(pdic={}, name='', id='', selected=''):
     _r = '<select id="%s" name="%s">' %(id,name)
-    for _k, _v in l.items():
-        _r = _r + '<option value="'+ str(_v) + '">' + _k + '</option>' 
+    for _k, _v in pdic.items():
+        _r = _r + '<option value="'+ str(_v) 
+        if selected == _v:
+            _r = _r + " " + "selected " 
+        _r = _r + '">' + _k + '</option>'
+    return  _r + '</select>'
+
+def html_checkbox_from_dic(pdic={}, name='', id='', selected=''):
+    _r = '<select id="%s" name="%s">' %(id,name)
+    for _k, _v in pdic.items():
+        _r = _r + '<option value="'+ str(_v) 
+        if selected == _v:
+            _r = _r + " " + "selected " 
+        _r = _r + '">' + _k + '</option>'
     return  _r + '</select>'

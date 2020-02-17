@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<!--[if lt IE 8 ]><html class="no-js ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="no-js ie ie8" lang="en"> <![endif]-->
+<!--[if IE 9 ]><html class="no-js ie ie9" lang="en"> <![endif]-->
+<!--[if (gte IE 8)|!(IE)]><!--><html class="no-js" lang="en"> <!--<![endif]-->
+<head>
+   <TMPL_INCLUDE name="js.html"/>
+   <!--- Basic Page Needs
+   ================================================== -->
+    <meta charset="utf-8">
+	<title><TMPL_VAR name="SITE_NAME"></title>
+	<meta name="<TMPL_VAR name="">" content="">  
+	<meta name="<TMPL_VAR name="">" content="">
+
+	<!-- mobile specific metas
+   ================================================== -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+   <!-- CSS
+    ================================================== -->
+    <link rel="stylesheet" href="<TMPL_VAR name="STATIC.furlpath">/css/default.css">
+    <link rel="stylesheet" href="<TMPL_VAR name="STATIC.furlpath">/css/layout.css">  
+    <link rel="stylesheet" href="<TMPL_VAR name="STATIC.furlpath">/css/media-queries.css">    
+
+   <!-- Favicons
+	================================================== -->
+	<link rel="shortcut icon" href="favicon.png" >
+
+</head><!-- Header================================================== -->
+<TMPL_INCLUDE name="base.html"/>
+<TMPL_INCLUDE name="js.html"/>
+
+<body class="single"> 
+   <header id="top">
+        <div class="row">
+            <div class="header-content twelve columns">
+               <h1 id="logo-text"><a href="/" title=""><TMPL_VAR name="PAGE_NAME"></a></h1>
+         </div>			
+     </div>
+     <nav id="nav-wrap"> 
+        <a class="mobile-btn" href="#nav-wrap" title="Show navigation">Show Menu</a>
+        <a class="mobile-btn" href="#" title="Hide navigation">Hide Menu</a>
+            <div class="row">    		            
+                <ul id="nav" class="nav">
+                    <li><a href="http://www.magwerks.com">Home</a></li>
+                    <TMPL_IF name="SEC.USER_TYPE" value="CUSTOMER">
+                        <li><a href="#">Customer Tools </a>
+                            <ul>
+                                <li><a href="/view">View Calibrations</a></li>
+                                <li><a href="#">Submit Data</a></li>
+                                <li><a href="#">Calibrations that are Due</a></li>
+                                <li><a href="#">Edit Contact Information</a></li>
+                            </ul>
+                        </li>
+                    </TMPL_IF>
+                    <li class="has-children"><a href="#">Magwerks TOOLS</a>
+                        <ul>
+                            <li><a href="/new_service">New Service Report</a></li>
+                            <li><a href="/new_cal">New Calibration Report</a></li>
+                            <li><a href="/list_cal">List Certificates </a></li>
+                            <li><a href="/list_sreports">List Service Reports </a></li>
+                        </ul>
+                    </li>
+
+                    </li>	
+                    <TMPL_IF name="SEC.USER_LOGGEDIN" value="True"> 
+                            <li><a href="log_out">Log out <TMPL_VAR name="SEC.DISPLAY_NAME"> </a></li>
+                    <TMPL_ELSE>
+                        <li><a href="log_in">Login</a></li>
+                    </TMPL_IF>
+                </ul> <!-- end #nav -->			   	 
+            </div> 
+	</nav> <!-- end #nav-wrap -->  
+</header>
+
+<!-- Content ================================================== -->
+	     
+<div id="content-wrap">
+    <div class="row">
+        <div id="main" class="eight columns">
+            <article class="entry">
+
+                <header class="entry-header">
+                    <h2 class="entry-title">
+                        Editing Certificate <TMPL_VAR name="calhead.calhead_id">
+                    </h2>
+                <form action="<TMPL_VAR name = "submit_cal_head">" method="post">
+                    <input name="calhead_id" id="calhead_id" type="hidden" placeholder=""  value="<TMPL_VAR name="calhead.calhead_id">">  
+                    <input name="calhead_calprohd_id" id="calhead_calprohd_id" type="hidden" placeholder="" value="<TMPL_VAR name="calhead.calhead_calprohd_id">">
+                    <input name="calhead_cust_id" id="calhead_cust_id" type="hidden" placeholder="calhead_cust_id"  value="<TMPL_VAR name="calhead.calhead_cust_id">"> 
+                    <input name="calhead_cntct_id" id="calhead_cntct_id" type="hidden" placeholder="" value="<TMPL_VAR name="calhead.calhead_cntct_id">">
+                    <label for="calhead_caldate">Calibration Date</label> 
+                        <input name="calhead_caldate" id="calhead_caldate" type="date" placeholder="calhead_caldate" required value="<TMPL_VAR name="calhead.calhead_caldate">">
+                    <label for="calhead_expire">Due Date</label> 
+                        <input name="calhead_expire" id="calhead_expire" type="date" placeholder="" required value="<TMPL_VAR name="calhead.calhead_expire">">
+                    <label for="calhead_temp"> Temperature</label> 
+                        <input name="calhead_temp" id="calhead_temp" type="number" placeholder="calhead_temp" required value="<TMPL_VAR name="calhead.calhead_temp">"> 
+                    <label for="calhead_humdity">Humdity </label> 
+                        <input name="calhead_humdity" id="calhead_humdity" type="number" placeholder="" required value="<TMPL_VAR name="calhead.calhead_humdity">"> 
+                    <label for="calhead_operator_notes">Operator Notes </label> 
+                        <textarea name="calhead_operator_notes" id="calhead_operator_notes" > <TMPL_VAR name="calhead.calhead_operator_notes"> </textarea>
+                    <input name="calhead_coitem_id" id="calhead_coitem_id" type="hidden" value="<TMPL_VAR name="calhead.calhead_coitem_id">">
+                    <label for="calhead_failcert"> Failed Cert </label> 
+                        <input name="calhead_failcert" id="calhead_failcert" type="checkbox" <TMPL_IF name="calhead_failcert" value="true"> checked </TMPL_IF> >
+                    <label for="calhead_status"> </label> <TMPL_VAR name="calhead_status"> 
+                    <label for="calhead_addr_line1">Cust Address Line 1 </label> 
+                        <input name="calhead_addr_line1" id="calhead_addr_line1" type="emtextail" placeholder="Line1" required value="<TMPL_VAR name="calhead.calhead_addr_line1">"> 
+                    <label for="calhead_addr_line2">Cust Address Line 2</label> 
+                        <input name="calhead_addr_line2" id="calhead_addr_line2" type="text" placeholder="Line2" required value="<TMPL_VAR name="calhead.calhead_addr_line2">">
+                    <label for="calhead_addr_line3">Cust Address Line 3 </label> 
+                        <input name="calhead_addr_line3" id="calhead_addr_line3" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_line3">">
+                    <label for="calhead_addr_city"> Cust Citry </label> 
+                        <input name="calhead_addr_city" id="calhead_addr_city" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_city">">
+                    <label for="calhead_addr_state"> Cust State</label> 
+                        <input name="calhead_addr_state" id="calhead_addr_state" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_state">">
+                    <label for="calhead_addr_postalcode">Cust Postal Code </label> 
+                        <input name="calhead_addr_postalcode" id="calhead_addr_postalcode" type="number" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_postalcode">">
+                    <label for="calhead_addr_country">Country </label> 
+                        <input name="calhead_addr_country" id="calhead_addr_country" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_country">">
+                    <input name="calhead_addr_number" id="calhead_addr_number" type="hidden" value="<TMPL_VAR name="calhead.calhead_addr_number">">
+                    <label for="calhead_cntct_name"> Contact Name</label> 
+                        <input name="calhead_cntct_name" id="calhead_cntct_name" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_name">"> 
+                    <label for="calhead_cntct_phone">Contact Phone # </label> 
+                        <input name="calhead_cntct_phone" id="calhead_cntct_phone" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_phone">">
+                    <label for="calhead_cntct_fax">Contact Phone </label> 
+                        <input name="calhead_cntct_fax" id="calhead_cntct_fax" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_fax">">
+                    <label for="calhead_cntct_email">Contact Email </label> 
+                        <input name="calhead_cntct_email" id="calhead_cntct_email" type="email" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_email">">
+                    <label for="calhead_cntct_title"> Contact Title</label> 
+                        <input name="calhead_cntct_title" id="calhead_cntct_title" type="text" placeholder="" required value="<TMPL_VAR name="ccalhead.alhead_cntct_title">">
+                    <input name="calhead_eqname" id="calhead_eqname" type="hidden" placeholder="" value="<TMPL_VAR name="calhead.calhead_eqname">">
+                    <label for="calhead_notesprinted">Notes to be Printed on the Certificate </label> 
+                        <textarea name="calhead_notesprinted", id="calhead_notesprinted"><TMPL_VAR name="calhead.calhead_notesprinted"></TMPL_VAR></textarea>
+                    <label for="calhead_operator">Lab Technician </label> 
+                        <input name="calhead_operator" id="calhead_operator" type="text" placeholder="" required  value="<TMPL_VAR name="calhead.calhead_operator">">
+                    <label for="calhead_supersedes">Replaced </label> 
+                        <input name="calhead_supersedes" id="calhead_supersedes" type="text" placeholder="" readonly='readonly'  value="<TMPL_VAR name="calhead.calhead_supersedes">">
+                    <label for="calhead_cust_po">Customer PO </label> 
+                        <input name="calhead_cust_po" id="calhead_cust_po" type="email" placeholder="" required  value="<TMPL_VAR name="calhead.calhead_cust_po">"> 
+                </form>
+
+                <form action="<TMPL_VAR name = "submit_cal_detail">" method="post">
+                    <div class="entry-meta"> 
+                    <table style="width:100%">
+                        <TMPL_LOOP name="caldetail">
+<!--Cal Detail RANGE Type Form Creation -->
+                            <TMPL_IF name="caldetail_datatype" value="range">
+                                <TMPL_IF name="prev_rangeid" notequal value="calprorules_calprange_id" > 
+                                    <tr> <th colspan="10">Calibrating Group:<TMPL_VAR name="calprorange_description"></th></tr>    
+                                    <tr> 
+                                        <th>Desired Test Point  </th>
+                                        <th>Unit of Measure  </th>
+                                        <th>Before Master </th>
+                                        <th>Before IUT  </th>
+                                        <th>Before Low Dev  </th>
+                                        <th>Before High Dev</th>
+                                        <th>After Master</th>
+                                        <th>After IUT</th>
+                                        <th>Before Low Dev  </th>
+                                        <th>Before High Dev</th>
+                                    </tr>
+                                </TMPL_IF>   
+                                <tr>
+                                    <td></td>
+                                    <td><TMPL_VAR name="calprorules_desired_value"></td>
+                                    <td><TMPL_VAR name="unit_shortdescr"></td>
+                                    <td>
+                                        <input name="<TMPL_VAR name="caldetail_id">-caldetail_std_asrcv" 
+                                                id="<TMPL_VAR name="caldetail_id">-<caldetail_std_asrcv" 
+                                                value="<TMPL_VAR name="caldetail_std_asrcv">"
+                                            type="number" required >
+                                    </td>
+                                    <td>
+                                        <input name="<TMPL_VAR name="caldetail_id">-caldetail_mut_asrcv" 
+                                                id="<TMPL_VAR name="caldetail_id">-caldetail_mut_asrcv "
+                                                value="<TMPL_VAR name="caldetail_mut_asrcv">"
+                                            type="number" required >
+                                    </td>
+                                    <td><TMPL_VAR name="caldetail_dev_asrcv_low"></td>
+                                    <td><TMPL_VAR name="caldetail_dev_asrcv_high"></td>
+
+                                    <td>
+                                        <input name="<TMPL_VAR name="caldetail_id">-caldetail_std_afterrcv" 
+                                                id="<TMPL_VAR name="caldetail_id">-caldetail_std_afterrcv" 
+                                                value="<TMPL_VAR name="">"
+                                            type="number" required >
+                                    </td>
+                                    <td>
+                                        <input name="<TMPL_VAR name="caldetail_id">-caldetail_mut_afterrcv" 
+                                                id="<TMPL_VAR name="caldetail_id">-caldetail_mut_afterrcv" 
+                                                value="<TMPL_VAR name="caldetail_mut_afterrcv">"
+                                            type="number" required >
+                                    </td>
+                                    <td><TMPL_VAR name="caldetail_dev_asrcv_high"></td>
+                                    <td><TMPL_VAR name="caldetail_dev_afterrcv_high"></td>
+                                </tr>
+                            </TMPL_IF>
+<!--END Cal Detail RANGE Type Form Creation -->    
+
+<!--Cal Detail Text Box Type Form Creation --> 
+
+                            <TMPL_IF name="caldetail_datatype" value="textdata">
+                                <TMPL_IF name="prev_rangeid" notequal value="calprorules_calprange_id" > 
+                                    <tr> <th colspan="10">Text Data To Collect</th></tr>    
+                                    <tr> 
+                                        <th>Description </th>
+                                        <th>Data Entry  </th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                    </tr>
+                                </TMPL_IF>
+                                <td><TMPL_VAR name="caldetail_descrip_text_datacollect"></td>
+                                <td> 
+                                    <input name="<TMPL_VAR name="caldetail_id">-caldetail_text" 
+                                            id="<TMPL_VAR name="caldetail_id">-caldetail_text" 
+                                            value="<TMPL_VAR name="caldetail_text">"
+                                            type="number" required >
+                                    </td>
+                                <td></td> <td></td>  <td></td>  <td></td> <td></td> <td></td> <td></td> <td></td>    
+                            </TMPL_IF>
+<!--END Cal Detail Text Box Type Form Creation --> 
+
+
+<!--Cal Detail Check off Type END Form Creation --> 
+
+                            <TMPL_IF name="caldetail_datatype" value="checkbox">
+                                    <TMPL_IF name="prev_rangeid" notequal value="calprorules_calprange_id" > 
+                                        <tr> <th colspan="10">Text Data To Collect</th></tr>    
+                                        <tr> 
+                                            <th>Description </th>
+                                            <th>Checkoff   </th>
+                                            <th>Checkoff does not Apply </th>
+                                            <th></th>
+                                            <th></th>
+                                            <th></th>
+                                            <th></th>
+                                            <th></th>
+                                            <th></th>
+                                            <th></th>
+                                        </tr>
+                                    </TMPL_IF>
+                                    <td><TMPL_VAR name="caldetail_checkoff_descrip"></td>
+                                    <td> 
+                                        <input name="<TMPL_VAR name="caldetail_id">-caldetail_checkoff_flag" 
+                                                id="<TMPL_VAR name="caldetail_id">-caldetail_checkoff_flag" 
+                                                type="checkbox" 
+                                                <TMPL_IF name="caldetail_checkoff_flag" value="true"> checked </TMPL_IF> 
+                                        >
+                                        <input name="<TMPL_VAR name="caldetail_id">-caldetail_checkoff_na" 
+                                                id="<TMPL_VAR name="caldetail_id">-caldetail_checkoff_na" 
+                                                type="checkbox" 
+                                                <TMPL_IF name="caldetail_checkoff_na" value="true"> checked </TMPL_IF> 
+                                        >
+                                        
+                                    </td>
+                                    <td>
+
+                                    </td> <td></td>  <td></td>  <td></td> <td></td> <td></td> <td></td> <td></td>    
+                                </TMPL_IF>
+<!--END Cal Detail Check off Type END Form Creation --> 
+                        </TMPL_LOOP>
+
+                        <td> 
+                            <input name="<TMPL_VAR name="caldetail_id">-" 
+                                    id="<TMPL_VAR name="caldetail_id">-" 
+                                    value="<TMPL_VAR name="">"
+                                    type="number" required >
+                        </td>
+                    </table> 
+                    <input type="submit" formmethod="POST" formaction ="submit_cal_save" value="Save & Calculate Deviation">
+                    <input type="submit" formmethod="POST" formaction ="submit_cal_copy" value="Save, Copy to After & Calculate Deviation">          
+                    </div> 
+                </form>
+            </header> 
+
+            </article>
+        </div>
+    </div>
+</div>
+    <script>
+        tinymce.init({
+          selector:'textarea',
+          file_picker_types: 'file image media',
+          images_upload_url: 'file_upload',
+          automatic_uploads: true,
+          plugins: 'a11ychecker advcode casechange formatpainter linkchecker lists checklist media mediaembed pageembed permanentpen powerpaste table advtable image tinymcespellchecker',
+          toolbar: 'a11ycheck addcomment showcomments casechange checklist code formatpainter insertfile image imagetools pageembed permanentpen table',
+          toolbar_drawer: 'floating',
+        });
+     </script>
+</body>

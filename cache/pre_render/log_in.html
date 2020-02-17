@@ -47,7 +47,23 @@
 </head>
 <!-- Header
    ================================================== -->
-    <header id="top">
+   <TMPL_INCLUDE name="top_nav_bar_mag.html"/>
+
+   <!-- Content
+   ================================================== -->
+   <form name="login" action="log_in" method="post"> 
+        Username:<input type="text" name="user_name" id="user_name" > <br>
+        Password:<input type="password" name="pwd" id="pwd"><br>
+        Remeber me:
+        <input type="checkbox" name="remeber" id="remeber">
+        <input type="hidden" id="CSB" name="CSB" value="<TMPL_VAR name="CSB">">
+        <input type="submit" value="Submit">
+   </form> 
+
+    <!-- Footer
+   ================================================== -->
+
+ <header id="top">
    	<div class="row">
    		<div class="header-content twelve columns">
 
@@ -83,37 +99,3 @@
 	   	</div> 
 	</nav> <!-- end #nav-wrap -->  	     
 </header> <!-- Header End -->
-
-   <!-- Content
-   ================================================== -->
-   <form name="login" action="log_in" method="post"> 
-        Username:<input type="text" name="user_name" id="user_name" > <br>
-        Password:<input type="password" name="pwd" id="pwd"><br>
-        Remeber me:
-        <input type="checkbox" name="remeber" id="remeber">
-        <input type="hidden" id="CSB" name="CSB" value="<TMPL_VAR name="CSB">">
-        <input type="submit" value="Submit">
-   </form> 
-
-    <!-- Footer
-   ================================================== -->
-
-	<!-- Java Script
-   ================================================== -->
-   <!--
-   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5-build-classic/build/ckeditor.js"> 
-   <!-- <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
-   <script src="https://cdn.tiny.cloud/1/hdjwdfr5sjn15d1gc78dbcb84qvnl901dt44ffrmj0xm0814/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
-   <script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"></script>
-   <!--<script>window.jQuery || document.write('<script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"><\/script>')</script> -->
-   <script src="<TMPL_VAR name="STATIC.furlpath">/js/main.js"></script>
-   <script src="https://www.google.com/recaptcha/api.js?render=_reCAPTCHA_site_key"></script>
-   <script>
-      grecaptcha.ready(function() {
-         grecaptcha.execute('_reCAPTCHA_site_key_', {action: 'homepage'}).then(function(token) {
-            ...
-         });
-      });
-   </script>
-
-

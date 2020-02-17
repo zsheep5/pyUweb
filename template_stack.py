@@ -12,10 +12,24 @@
  """ 
 def get_ts():
     return {
-    '/':['main.html', 
-            'blog.html', 
-            'blog_comments.html', 
-            'search.html'],
+    'main':['main.html',
+            'base.html',
+            'top_nav_bar_mag.html',
+            'js.html', 
+            ],
+    'list_cal':['base.html',
+                'calibration.html',
+                'top_nav_bar_mag.html',
+            ],
+    'edit_cal':['base.html',
+                'calibration_edit.html',
+                'top_nav_bar_mag.html',
+            ],
+    '/':['main.html',
+        'base.html',
+        'top_nav_bar_mag.html',
+        'js.html', 
+            ],
     'view':['view_page.html',
             'base.html',
             'top_nav_bar.html',
@@ -39,7 +53,7 @@ def get_ts():
         ],
     'log_in':['log_in.html',
             'base.html',
-            'top_nav_bar.html',
+            'top_nav_bar_mag.html',
             'js.html'
         ],
     'error':['error.html'],
@@ -47,12 +61,5 @@ def get_ts():
             'top_nav_bar.html',
             'side_bar.html',
             'file.html'],
-    'list_cal':['base.html',
-                'calibration.html',
-                'top_nav_bar_mag.html',
-            ],
-     'list_cal':['base.html',
-                'edit_cal.html',
-                'top_nav_bar_mag.html',
-            ]
+
 }
