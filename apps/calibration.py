@@ -23,6 +23,8 @@ def list_cal(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
     
     CONTEXT.update({'cal_head': m.run_sql_command(ENVIRO.get('CONN'), q_str)})
     CONTEXT.update({'cert_types':get_cert_types(ENVIRO)})
+    CONTEXT.update({'PAGE_NAME':"List Certificates" })
+    CONTEXT.update({'PAGE_DESCRIPTION':"Page listing certificates to edit, print and replace"})
     
     _rec = m.run_sql_command(ENVIRO.get('CONN'), q_str)
     _ouput = TEMPLATE_ENGINE(pfile = TEMPLATE, 
@@ -53,6 +55,8 @@ def get_cert_types(ENVIRO= {}):
 def get_cert_edit(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
                 COOKIES={}, CONTEXT={}, TEMPLATE='', 
                 TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
+    
+    
     if 'calhead_id' in GET:
         _key = int(''.join(GET.get('calhead_id','-1')))
     elif 'calhead_id' in POST:
@@ -62,6 +66,8 @@ def get_cert_edit(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
         return True, '', ENVIRO, CLIENT_STATE, COOKIES, CSB 
     CONTEXT.update({'calhead': get_cert_header(ENVIRO, _key)[0]})
     CONTEXT.update({'caldetail':get_cert_detail_edit(ENVIRO, _key)})
+    CONTEXT.update({'PAGE_NAME':"Edit Certificate" + str(_key)})
+    CONTEXT.update({'PAGE_DESCRIPTION':"Editing calibration certificates"})
 
     _output = TEMPLATE_ENGINE(pfile = TEMPLATE, 
                             ptype = 'string',
