@@ -139,7 +139,7 @@
                         <input name="calhead_failcert" id="calhead_failcert" type="checkbox" <TMPL_IF name="calhead_failcert" value="true"> checked </TMPL_IF> >
                     <label for="calhead_status"> </label> <TMPL_VAR name="calhead_status"> 
                     <label for="calhead_addr_line1">Cust Address Line 1 </label> 
-                        <input name="calhead_addr_line1" id="calhead_addr_line1" type="text" placeholder="Line1" required value="<TMPL_VAR name="calhead.calhead_addr_line1">"> 
+                        <input name="calhead_addr_line1" id="calhead_addr_line1" type="emtextail" placeholder="Line1" required value="<TMPL_VAR name="calhead.calhead_addr_line1">"> 
                     <label for="calhead_addr_line2">Cust Address Line 2</label> 
                         <input name="calhead_addr_line2" id="calhead_addr_line2" type="text" placeholder="Line2" required value="<TMPL_VAR name="calhead.calhead_addr_line2">">
                     <label for="calhead_addr_line3">Cust Address Line 3 </label> 
@@ -162,7 +162,7 @@
                     <label for="calhead_cntct_email">Contact Email </label> 
                         <input name="calhead_cntct_email" id="calhead_cntct_email" type="email" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_email">">
                     <label for="calhead_cntct_title"> Contact Title</label> 
-                        <input name="calhead_cntct_title" id="calhead_cntct_title" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_title">">
+                        <input name="calhead_cntct_title" id="calhead_cntct_title" type="text" placeholder="" required value="<TMPL_VAR name="ccalhead.alhead_cntct_title">">
                     <input name="calhead_eqname" id="calhead_eqname" type="hidden" placeholder="" value="<TMPL_VAR name="calhead.calhead_eqname">">
                     <label for="calhead_notesprinted">Notes to be Printed on the Certificate </label> 
                         <textarea name="calhead_notesprinted" id="calhead_notesprinted"><TMPL_VAR name="calhead.calhead_notesprinted"></textarea>
@@ -171,7 +171,7 @@
                     <label for="calhead_supersedes">Replaced </label> 
                         <input name="calhead_supersedes" id="calhead_supersedes" type="text" placeholder="" readonly='readonly'  value="<TMPL_VAR name="calhead.calhead_supersedes">">
                     <label for="calhead_cust_po">Customer PO </label> 
-                        <input name="calhead_cust_po" id="calhead_cust_po" type="text" placeholder="" required  value="<TMPL_VAR name="calhead.calhead_cust_po">"> 
+                        <input name="calhead_cust_po" id="calhead_cust_po" type="email" placeholder="" required  value="<TMPL_VAR name="calhead.calhead_cust_po">"> 
                     <input type="submit" formmethod="POST" formaction ="save_cert_header" value="Save Header">
                 </form>
 
@@ -180,10 +180,9 @@
                     <div class="entry-meta"> 
                     <table style="width:100%">
                         <TMPL_LOOP name="caldetail">
-
+<!--Cal Detail RANGE Type Form Creation -->
                             <TMPL_IF name="caldetail_datatype" value="range">
-                                <!--Cal Detail RANGE Type Form Creation -->
-                                <TMPL_IF name="calprorange_description" notequal value="prev_descrip" > 
+                                <TMPL_IF name="prev_rangeid" notequal value="calprorules_calprange_id" > 
                                     <tr> <th colspan="10">Calibrating Group:<TMPL_VAR name="calprorange_description"></th></tr>    
                                     <tr> 
                                         <th>Desired Test Point  </th>
@@ -232,13 +231,12 @@
                                     <td><TMPL_VAR name="caldetail_dev_asrcv_high"></td>
                                     <td><TMPL_VAR name="caldetail_dev_afterrcv_high"></td>
                                 </tr>
-                            <!--END Cal Detail RANGE Type Form Creation -->
                             </TMPL_IF>
-    
- 
+<!--END Cal Detail RANGE Type Form Creation -->    
+
+<!--Cal Detail Text Box Type Form Creation --> 
 
                             <TMPL_IF name="caldetail_datatype" value="textdata">
-                            <!--Cal Detail Text Box Type Form Creation -->
                                 <TMPL_IF name="prev_rangeid" notequal value="calprorules_calprange_id" > 
                                     <tr> <th colspan="10">Text Data To Collect</th></tr>    
                                     <tr> 
@@ -262,13 +260,22 @@
                                                 value="<TMPL_VAR name="caldetail_text">"
                                                 type="text"  >
                                         </td>
-                                       
-                                    </tr>  
-                            <!--END Cal Detail Text Box Type Form Creation -->  
+                                        <td></td> 
+                                        <td></td> 
+                                        <td></td>  
+                                        <td></td> 
+                                        <td></td> 
+                                        <td></td> 
+                                        <td></td> 
+                                        <td></td>
+                                    </tr>    
                             </TMPL_IF>
- 
+<!--END Cal Detail Text Box Type Form Creation --> 
+
+
+<!--Cal Detail Check off Type END Form Creation --> 
+
                             <TMPL_IF name="caldetail_datatype" value="checkbox">
-                                <!--Cal Detail Check off Type END Form Creation --> 
                                 <TMPL_IF name="prev_rangeid" notequal value="calprorules_calprange_id" > 
                                     <tr> <th colspan="10">Text Data To Collect</th></tr>    
                                     <tr> 
@@ -300,10 +307,9 @@
                                 </td>
                                 <td>
 
-                                </td> <td></td>  <td></td>  <td></td> <td></td> <td></td> <td></td> <td></td>
-                            <!--END Cal Detail Check off Type END Form Creation -->     
+                                </td> <td></td>  <td></td>  <td></td> <td></td> <td></td> <td></td> <td></td>    
                             </TMPL_IF>
-
+<!--END Cal Detail Check off Type END Form Creation --> 
                         </TMPL_LOOP>
 
                         <!--<td> 

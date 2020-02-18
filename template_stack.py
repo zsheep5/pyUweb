@@ -20,10 +20,12 @@ def get_ts():
     'list_cal':['base.html',
                 'calibration.html',
                 'top_nav_bar_mag.html',
+                'js.html'
             ],
     'edit_cal':['base.html',
                 'calibration_edit.html',
                 'top_nav_bar_mag.html',
+                'js.html'
             ],
     '/':['main.html',
         'base.html',

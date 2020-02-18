@@ -19,7 +19,7 @@ def list_cal(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
 		from mcal.calhead 
 		left join mcal.calprohd on calhead_calprohd_id = calprohd_id 
 		left join custinfo on calhead_cust_id = cust_id 
-		order by calhead_caldate"""
+		order by calhead_caldate desc"""
     
     CONTEXT.update({'cal_head': m.run_sql_command(ENVIRO.get('CONN'), q_str)})
     CONTEXT.update({'cert_types':get_cert_types(ENVIRO)})
@@ -76,6 +76,7 @@ def get_cert_edit(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
                             )
 
     return True, _output, ENVIRO, CLIENT_STATE, COOKIES, CSB
+
 def cert_replace(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
                 COOKIES={}, CONTEXT={}, TEMPLATE='', 
                 TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
@@ -120,22 +121,73 @@ def get_cert_statuses():
 def save_cert_header(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
                 COOKIES={}, CONTEXT={}, TEMPLATE='', 
                 TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
-    pass
+    _columns = ['calhead_id','calhead_caldate' , 'calhead_expire' , 'calhead_temp' ,
+                'calhead_humdity' ,'calhead_operator_notes', 'calhead_coitem_id' ,
+                'calhead_failcert' ,'calhead_status','calhead_addr_line1' ,
+                'calhead_addr_line2','calhead_addr_line3','calhead_addr_city' ,
+                'calhead_addr_state' ,'calhead_addr_postalcode' ,'calhead_addr_country' ,
+                'calhead_addr_number','calhead_cntct_name ','calhead_cntct_phone' ,
+                'calhead_cntct_fax' ,'calhead_cntct_email' ,'calhead_cntct_title' ,
+                'calhead_notesprinted ','calhead_operator' ,'calhead_supersedes' ,
+                'calhead_cust_po']
+    _sql = """begin;
+            Update mcal.calhead set 
+                calhead_caldate = %(calhead_caldate)s,
+                calhead_expire = %(calhead_expire)s,
+                calhead_temp = %(calhead_temp)s,
+                calhead_humdity = %(calhead_humdity)s,
+                calhead_operator_notes = %(calhead_operator_notes)s,
+                calhead_coitem_id = %(calhead_coitem_id)s,
+                calhead_failcert = %(calhead_failcert)s,
+                calhead_status = %(calhead_status)s,
+                calhead_addr_line1 = %(calhead_addr_line1)s,
+                calhead_addr_line2 = %(calhead_addr_line2)s,
+                calhead_addr_line3 = %(calhead_addr_line3)s,
+                calhead_addr_city = %(calhead_addr_city)s,
+                calhead_addr_state = %(calhead_addr_state)s,
+                calhead_addr_postalcode = %(calhead_addr_postalcode)s,
+                calhead_addr_country = %(calhead_addr_country)s,
+                calhead_cntct_name = %(calhead_cntct_name)s,
+                calhead_cntct_phone = %(calhead_cntct_phone)s,
+                calhead_cntct_fax = %(calhead_cntct_fax)s,
+                calhead_cntct_email = %(calhead_cntct_email)s,
+                calhead_cntct_title = %(calhead_cntct_title)s,
+                calhead_notesprinted = %(calhead_notesprinted)s,
+                calhead_operator = %(calhead_operator)s ,
+                calhead_cust_po = %(calhead_cust_po)s
+                where calhead_id = %(calhead_id)s ;
+            rollback;
+            """
+    _data = {}
+    for _k, _v in POST.items():
+        if _k in _columns:
+            _data.update({_key:_v[0]})
 
-def save_cert_detail(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
-                COOKIES={}, CONTEXT={}, TEMPLATE='', 
-                TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
-    pass
+    _r = m.run_sql_command(ENVIRO.get('CONN'),_sql, _data)
+
+    return get_cert_edit(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, 
+                            TEMPLATE, TEMPLATE_ENGINE, CSB, TEMPLATE_STACK)
+
 def submit_cal_save(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
                 COOKIES={}, CONTEXT={}, TEMPLATE='', 
                 TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
-    if 'calhead_id' in GET:
-        _key = int(''.join(GET.get('calhead_id','-1')))
-    elif 'calhead_id' in POST:
-        _key = int(''.join(POST.get('calhead_id','-1')))
-    
-    if _key == -1:
-        return True, '', ENVIRO, CLIENT_STATE, COOKIES, CSB 
+
+    _sql = ''
+    for _k, _v in POST.items():
+        _parts = _k.split('-')
+        if _parts[0] in ('caldetail_mut_afterrcv', 'caldetail_mut_asrcv',  
+                        'caldetail_std_afterrcv', 'caldetail_std_asrcv',) :
+            _sql = _sql + "Update mcal.caldetail set %s = %s where caldetail_id = %s ; \r\n " %( _parts[0], _v[0],_parts[1])
+        elif _parts[0] == 'caldetail_default_text':
+            _sql = _sql + "Update mcal.caldetail set %s = $$%s$$ where caldetail_id = %s ; \r\n " %( _parts[0], _v[0],_parts[1])
+        elif _parts[0] in ('caldetail_checkoff_flag', 'caldetail_checkoff_na' ):
+            _sql = _sql + "Update mcal.caldetail set %s = %s where caldetail_id = %s ; \r\n " %( _parts[0], _v[0],_parts[1])
+
+    _sql = 'begin; ' + _sql + ' rollback;'
+    _r = m.run_sql_command(ENVIRO.get('CONN'),_sql  )
+
+    return get_cert_edit(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, 
+                            TEMPLATE, TEMPLATE_ENGINE, CSB, TEMPLATE_STACK)
 
 def submit_cal_copy(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
                 COOKIES={}, CONTEXT={}, TEMPLATE='', 
@@ -232,6 +284,7 @@ def get_cert_header(ENVIRO={}, pcalhead_id=-1 ):
                     calhead_cust_po 
                 from mcal.calhead 
                 where calhead_id = %(pcalhead_id)s  
+                order by 1 desc
                 """
     return m.run_sql_command(ENVIRO.get('CONN'), _sql, 
                     {'pcalhead_id':pcalhead_id}
@@ -271,30 +324,32 @@ def get_cert_detail(ENVIRO={}, pcert_id=-1):
     return m.run_sql_command(ENVIRO.get('CONN'), _sql, {'cert_id':pcert_id})
 
 def get_cert_detail_edit(ENVIRO={}, pcert_id=-1):
-    _sql =  """select calprorange_description, calprorules_desired_value,
-            caldetail_id,
+    _sql =  """select calprorange_description, 
+                        round(calprorules_desired_value,3 ) as calprorules_desired_value,
+                        caldetail_id,
                         caldetail_calhead_id,
                         caldetail_calprorules_id ,
 						caldetails_seqence ,
-						caldetail_std_asrcv ,
-						caldetail_mut_asrcv ,
-						caldetail_std_afterrcv ,
-						caldetail_mut_afterrcv ,
+						round(caldetail_std_asrcv, 3) as caldetail_std_asrcv  ,
+						round(caldetail_mut_asrcv, 3) as caldetail_mut_asrcv,
+						round(caldetail_std_afterrcv, 3) as caldetail_std_afterrcv,
+						round(caldetail_mut_afterrcv, 3) as caldetail_mut_afterrcv,
 						caldetail_timestamp ,
 						caldetail_datatype ,
 						caldetail_descrip_text_datacollect ,
 						caldetail_default_text as caldetail_text ,
 						caldetail_checkoff_descrip ,
 						caldetail_checkoff_values ,
-						caldetail_dev_asrcv_low ,
+						round(caldetail_dev_asrcv_low, 3) as caldetail_dev_asrcv_low,
 						caldetail_checkoff_flag ,
-						caldetail_dev_afterrcv_low ,
-						caldetail_dev_asrcv_high ,
-						caldetail_dev_afterrcv_high ,
+						round(caldetail_dev_afterrcv_low, 3) as caldetail_dev_afterrcv_low,
+						round(caldetail_dev_asrcv_high, 3) as caldetail_dev_asrcv_high,
+						round(caldetail_dev_afterrcv_high, 3) as caldetail_dev_afterrcv_high,
 						caldetail_devtext ,
 						caldetail_standard_altvalue,
 						caldetail_checkoff_na, 
             lag(caldetail_datatype) OVER (order by caldetails_seqence asc) as prev_datatype, 
+            lag(calprorange_description) OVER (order by caldetails_seqence asc) as prev_descrip, 
             calprorules_id, calprorules_calprorange_id, 
             lag(calprorules_calprorange_id) OVER (order by caldetails_seqence asc) as prev_rangeid, 
             calprorules_standard_altvalue, 
@@ -336,10 +391,12 @@ def get_cert_report(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
                     and calhead_id = %(calhead_id)s
              """
     _r = m.run_sql_command(ENVIRO.get('CONN'),q_str, {'calhead_id':_key})
+    _output = _r[0]['report_binary']
+    _data = bytes(_output[1:])
     ENVIRO.get('HEADERS',{}).update(
         {'Content-Type': 'application/pdf', 
         'Content-Description':_r[0]['report_name'],
         'Content-Disposition':'attachment; filename="%s"'%(_r[0]['report_name'])
         })
 
-    return True, _r[0]['report_binary'], ENVIRO, CLIENT_STATE, COOKIES, CSB 
+    return True, _data , ENVIRO, CLIENT_STATE, COOKIES, CSB 

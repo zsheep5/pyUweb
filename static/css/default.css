@@ -118,7 +118,18 @@ table {
    border-collapse: collapse;
    border-spacing: 0;
 }
-
+tr{
+   border: solid;
+   border-width: 1px 0;
+}
+td.last {
+   width: 1px;
+   white-space: nowrap;
+}
+td.fitwidth {
+   width: 1px;
+   white-space: nowrap;
+}
 
 /* ------------------------------------------------------------------ */
 /* c. Default and Basic Styles

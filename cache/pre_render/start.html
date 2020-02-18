@@ -8,7 +8,7 @@
    ================================================== -->
    <!--
    <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5-build-classic/build/ckeditor.js"> 
-   <!-- <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
    <script src="https://cdn.tiny.cloud/1/hdjwdfr5sjn15d1gc78dbcb84qvnl901dt44ffrmj0xm0814/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
    <script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"></script>
    <!--<script>window.jQuery || document.write('<script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"><\/script>')</script> -->
@@ -78,11 +78,9 @@
                             <li><a href="/list_cal">List Certificates </a></li>
                             <li><a href="/list_sreports">List Service Reports </a></li>
                         </ul>
-                    </li>
-
                     </li>	
                     <TMPL_IF name="SEC.USER_LOGGEDIN" value="True"> 
-                            <li><a href="log_out">Log out <TMPL_VAR name="SEC.DISPLAY_NAME"> </a></li>
+                        <li><a href="log_out">Log out <TMPL_VAR name="SEC.DISPLAY_NAME"> </a></li>
                     <TMPL_ELSE>
                         <li><a href="log_in">Login</a></li>
                     </TMPL_IF>
@@ -90,6 +88,7 @@
             </div> 
 	</nav> <!-- end #nav-wrap -->  
 </header>
+
 
    <!-- Content
    ================================================== -->

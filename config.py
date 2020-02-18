@@ -106,7 +106,7 @@ def get_enviro():
         'Content-Type':'text/html;',
         'charset':'UTF-8',
         },
-    'ALLOWED_HOST_NAMES': ['localhost', '127.0.0.1', 'g-server', '192.168.1.72'],
+    'ALLOWED_HOST_NAMES': ['localhost', '127.0.0.1', 'g-server', '192.168.1.72', '192.168.1.120'],
     'APPS_PATH':(base_directory+'apps',),
     'USING_WAITRESS':True,
     'CAPTICHA_client_key': '6LcMYdQUAAAAAPn2Z6HFBKoVPNApIyhe5stGMQWZ',

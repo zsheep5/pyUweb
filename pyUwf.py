@@ -232,6 +232,13 @@ def server_respond(pstatus='200',
         pcsb=''
        ):
     
+    if pheaders.get('Content-type') != 'text/html;':
+        return server_respondf(pstatus='200', 
+            pheaders,
+            poutput,
+            sr ,
+            pserver_enviro=None,
+            ENVIRO ={}):
     if CLIENT_STATE is not None:
         session.save_session(CLIENT_STATE, 
                 POST={}, 
@@ -393,7 +400,6 @@ def run_pyapp(papp_filename='',
                                                   TEMPLATE_STACK=TEMPLATE_STACK
                         ) 
         if _result :
-            ENVIRO.get('HEADER',{}).update({'Content-type': pcontent_type })
             if pserver_cache_on:
                 results_cache_put_in('post_render_'+papp_filename + "_" + papp_command + ".html", _raw_output, ENVIRO, MEMCACHE)
         
@@ -707,7 +713,7 @@ def parse_POST(web_enviro, POST={}, CSB='', ENVIRO={}):
         if 'application/x-www-form-urlencoded' in _ct:
             _data = _dd.read(request_body_size)
             try:
-                _form_data = parse_qs(_data)
+                _form_data = parse_qs(_data.decode('utf-8'))
             except UnicodeDecodeError:
                 # ... but some user agents are misbehaving :-(
                 _form_data = parse_qs(_data.decode('iso-8859-1'))
