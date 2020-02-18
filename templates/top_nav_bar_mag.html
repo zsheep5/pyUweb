@@ -27,11 +27,9 @@
                             <li><a href="/list_cal">List Certificates </a></li>
                             <li><a href="/list_sreports">List Service Reports </a></li>
                         </ul>
-                    </li>
-
                     </li>	
                     <TMPL_IF name="SEC.USER_LOGGEDIN" value="True"> 
-                            <li><a href="log_out">Log out <TMPL_VAR name="SEC.DISPLAY_NAME"> </a></li>
+                        <li><a href="log_out">Log out <TMPL_VAR name="SEC.DISPLAY_NAME"> </a></li>
                     <TMPL_ELSE>
                         <li><a href="log_in">Login</a></li>
                     </TMPL_IF>
