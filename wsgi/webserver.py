@@ -21,10 +21,10 @@ def parse_args(p_argv):
     _paser = op()
     _paser.add_option('-p', '--port', dest='port', default=8080,  type='int',
         help='port number to bind to', metavar='PORT')
-    _paser.add_option('-a', '--ipaddress', dest='ip', default='192.168.1.120', 
-        help='ip address to bind to', metavar='IPADDRESS')
-    #_paser.add_option('-a', '--ipaddress', dest='ip', default='localhost', 
+    #_paser.add_option('-a', '--ipaddress', dest='ip', default='192.168.1.120', 
     #    help='ip address to bind to', metavar='IPADDRESS')
+    _paser.add_option('-a', '--ipaddress', dest='ip', default='localhost', 
+        help='ip address to bind to', metavar='IPADDRESS')
     _paser.add_option('-m', '--module', dest='module', default='pyUwf', 
         help='module to import can be a full path', metavar='MODULE')
     _paser.add_option('-f', '--function', dest='func', default='kick_start',

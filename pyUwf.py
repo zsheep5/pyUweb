@@ -232,13 +232,9 @@ def server_respond(pstatus='200',
         pcsb=''
        ):
     
-    if pheaders.get('Content-type') != 'text/html;':
-        return server_respondf(pstatus='200', 
-            pheaders,
-            poutput,
-            sr ,
-            pserver_enviro=None,
-            ENVIRO ={}):
+    if pheaders.get('Content-Type', '') == '':
+        pheader.update({'Content':'text/html;'})
+
     if CLIENT_STATE is not None:
         session.save_session(CLIENT_STATE, 
                 POST={}, 
@@ -251,7 +247,10 @@ def server_respond(pstatus='200',
         cc =[('Set-Cookie', v.output(attrs=None, header='') ) for k, v in pcookies.items()] #put in the cookies 
         #aa =[('Set-Cookie', pcookies.output(attrs=None, header='', sep=''))]
         _head.extend( cc)
-    _outputB = poutput.encode(encoding='utf-8', errors='replace')
+    if isinstance(poutput,bytes) :
+        _outputB = poutput
+    else:
+        _outputB = poutput.encode(encoding='utf-8', errors='replace')
 
     ##add the content length just before returning wsgi module
     _head.append( ('Content-Length', str(len(_outputB))))
@@ -865,7 +864,10 @@ def run_sql_command(CONN = None, p_sql='', p_topass= None):
     except Exception as e:  #yes this is a generic catch but there are hundreds of different possible execptions declared in pyscopg2 class 
         import traceback as tb 
         _stack = tb.print_stack()
-        _last_command = _cur.query.decode('utf-8')
+        if _cur.query is not None:
+            _last_command = _cur.query.decode('utf-8')
+        else:
+            _last_command = p_sql
         _db_error = [ x for x in e.args]
         _error_mess = """SQL ERROR the last command sent ' %(command)s
         caused the following error %(error)s 
@@ -905,6 +907,7 @@ def furl_get_to_app(papp, ENVIRO, GET, ):
 
 def furl_url_to_file():
     pass
+
 def check_SSL(e, ENVIRO):
     if ENVIRO.get('SEC').get('SSL_REQUIRE'):
         if e.get('HTTPS', 'off') in ('on', '1'):

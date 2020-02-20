@@ -64,9 +64,11 @@ def get_cert_edit(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
     
     if _key == -1:
         return True, '', ENVIRO, CLIENT_STATE, COOKIES, CSB 
-    CONTEXT.update({'calhead': get_cert_header(ENVIRO, _key)[0]})
+    _r = get_cert_header(ENVIRO, _key)[0]
+    CONTEXT.update({'calhead':_r})
     CONTEXT.update({'caldetail':get_cert_detail_edit(ENVIRO, _key)})
-    CONTEXT.update({'PAGE_NAME':"Edit Certificate" + str(_key)})
+    CONTEXT.update({'cal_itemlink': get_item_linked_to_certs(ENVIRO, _r['calhead_calprohd_id'])})
+    CONTEXT.update({'PAGE_NAME':"Edit Certificate " + str(_key)})
     CONTEXT.update({'PAGE_DESCRIPTION':"Editing calibration certificates"})
 
     _output = TEMPLATE_ENGINE(pfile = TEMPLATE, 
@@ -81,6 +83,28 @@ def cert_replace(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
                 COOKIES={}, CONTEXT={}, TEMPLATE='', 
                 TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
     pass
+def link_item_cert(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
+                COOKIES={}, CONTEXT={}, TEMPLATE='', 
+                TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
+    _calhead = POST.get('calhead_id', [''])
+    _item_id = POST.get('item_id', [''])
+    if _calhead[0] >'' or _item_id[0] >'':  
+        _sql = 'update mcal.calhead set calhead_coitem_id = %(item_id)s where calhead_id = %(_calhead)s'
+        _r = m.run_sql_command(ENVIRO.get('CONN'),_sql, {'_calhead':_calhead[0],
+                                                        'item_id':_item_id[0]
+                                                    })
+
+    headers= {
+        'Content-Type':'text/html;',
+        'charset':'UTF-8',
+        'Location':'/cert_edit?calhead_id=' + _calhead[0]
+        }
+    ENVIRO.update({'STATUS':'303'})
+    ENVIRO.update({HEADERS:headers})
+    return True, '', ENVIRO, CLIENT_STATE, COOKIES, CSB
+
+
+
 def get_item_linked_to_certs(ENVIRO={}, pcalprohd_id=-1):
         
     q_str = """ 
@@ -93,12 +117,12 @@ def get_item_linked_to_certs(ENVIRO={}, pcalprohd_id=-1):
 	                from mcal.calpro_item_link, item
 	                where calpil_item_id = item_id
 	                and calpil_calprohd_id = %(calprohd_id)s
-                )"""
+                ) cc """
 
     import html_helpers as hh
     _r = m.run_sql_command(ENVIRO.get('CONN'), q_str, 
                             {'calprohd_id':pcalprohd_id})
-    _r = hh.html_combobox( _r[0]['item_linked'])    
+    _r = hh.html_combobox( _r[0]['item_linked'], 'item_id','item_id')    
 
     return _r 
     
@@ -117,6 +141,76 @@ def get_cert_statuses():
     _r = hh.html_combobox_from_dic( dd )
 
     return  _r
+
+def list_procedures(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
+                COOKIES={}, CONTEXT={}, TEMPLATE='', 
+                TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
+
+    CONTEXT.update({'PAGE_NAME':"Pick Calibration Procedure to Create a New Certificate" })
+    CONTEXT.update({'PAGE_DESCRIPTION':"List of Cert Procedures"})
+    _sql = """select *, 
+                    '<a href=new_cal?calprohd_id=' || calprohd_id::text || '> New Cal </a>'
+                    as url_new 
+                from mcal.calprohd 
+                where calprohd_active 
+                    and calprohd_expire > now()::date
+                order by calprohd_descrip """
+    
+    CONTEXT.update({'calprohd':m.run_sql_command(ENVIRO.get('CONN'), _sql )})
+
+    _ouput = TEMPLATE_ENGINE(pfile = TEMPLATE, 
+                            ptype = 'string',
+                            pcontext = CONTEXT, 
+                            preturn_type ='string', 
+                            pcache_path = ENVIRO.get('TEMPLATE_CACHE_PATH_PRE_RENDER', ''))
+
+    return True, _ouput, ENVIRO, CLIENT_STATE, COOKIES, CSB
+
+def new_cal(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
+                COOKIES={}, CONTEXT={}, TEMPLATE='', 
+                TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
+    _calprohd = GET.get('calprohd_id', '')
+    if _calprohd == None:
+        _is_in_cache, TEMPLATE, _template_name = m.build_template('list_procedures', 
+                                                                    get_template_stack('list_procedures'), 
+                                                                    True,
+                                                                    p_template_extension='html' ,
+                                                                    ENVIRO=ENVIRO)
+        return list_procedures(POST, GET, ENVIRO, CLIENT_STATE, 
+                COOKIES, CONTEXT, TEMPLATE, 
+                TEMPLATE_ENGINE, CSB, TEMPLATE_STACK)
+    _sql = "select mcal.create_cert( %(calprohd)s) as id "
+    _r = m.run_sql_command(ENVIRO.get('CONN'), _sql, {'calprohd':_calprohd[0]})
+    #GET.update({'calhead_id': [str(_r[0]['id'])]})
+    headers= {
+        'Content-Type':'text/html;',
+        'charset':'UTF-8',
+        'Location':'/cert_edit?calhead_id=' + str(_r[0]['id'])
+        }
+    ENVIRO.update({'STATUS':'303'})
+    ENVIRO.update({'HEADERS':headers})
+    return True, '', ENVIRO, CLIENT_STATE, COOKIES, CSB
+
+def link_to_sales_order(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
+                COOKIES={}, CONTEXT={}, TEMPLATE='', 
+                TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
+    _calprohd = POST.get('calhead_id', [''])
+    _sales_order = POST.get('sales_order', [''])
+    _so_line =  POST.get('so_line', [''])
+    if _calprohd[0] >'' or _sales_order[0] >'':  
+        _sql = 'select mcal.set_cert_header( %(calprohd)s, %(sales_order)s, %(_so_line)s);'
+        _r = m.run_sql_command(ENVIRO.get('CONN'),_sql, {'calprohd':_calprohd[0],
+                                                        'sales_order':_sales_order[0],
+                                                        '_so_line':_so_line[0]
+                                                    })
+    headers= {
+        'Content-Type':'text/html;',
+        'charset':'UTF-8',
+        'Location':'/cert_edit?calhead_id=' + _calprohd[0]
+        }
+    ENVIRO.update({'STATUS':'303'})
+    ENVIRO.update({'HEADERS':headers})
+    return True, '', ENVIRO, CLIENT_STATE, COOKIES, CSB
 
 def save_cert_header(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
                 COOKIES={}, CONTEXT={}, TEMPLATE='', 
@@ -190,11 +284,6 @@ def submit_cal_save(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
                             TEMPLATE, TEMPLATE_ENGINE, CSB, TEMPLATE_STACK)
 
 def submit_cal_copy(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
-                COOKIES={}, CONTEXT={}, TEMPLATE='', 
-                TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
-    pass
-
-def enter_cert_detail(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
                 COOKIES={}, CONTEXT={}, TEMPLATE='', 
                 TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
     pass

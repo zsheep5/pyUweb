@@ -289,7 +289,7 @@ def comment_on_blog(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, CONTEXT, TEMPLATE,
 
     if len(_rec)>0:
         POST.update({'blogkey':_rec[0]['blog_id']})
-        _is_in_cache, TEMPLATE, _template_name = build_template(papp_command, get_template_stack('view'), True)
+        _is_in_cache, TEMPLATE, _template_name = m.build_template(papp_command, get_template_stack('view'), True)
         return view(POST, GET, ENVIRO, CLIENT_STATE, COOKIES, {},TEMPLATE, TEMPLATE_ENGINE )
 
 def get_cats(POST, GET, ENVIRO, COOKIES, CLIENT_STATE, CONTEXT, TEMPLATE, TEMPLATE_ENGINE, CSB='', TEMPLATE_STACK={}):

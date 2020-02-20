@@ -22,6 +22,11 @@ def get_ts():
                 'top_nav_bar_mag.html',
                 'js.html'
             ],
+    'list_procedures':['base.html',
+                'calibration_list_procedures.html',
+                'top_nav_bar_mag.html',
+                'js.html'
+            ],
     'edit_cal':['base.html',
                 'calibration_edit.html',
                 'top_nav_bar_mag.html',
