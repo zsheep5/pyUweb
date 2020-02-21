@@ -23,10 +23,14 @@ def kick_start(enviro, start_response):
     ENVIRO =g.get_enviro()
     ENVIRO.update({'APPSTACK':g.APPSTACK})
     ENVIRO.update({'SEC': g.SEC()}) ##start with the basic SEC skeleton
+    POST = None
     POST={}
+    GET = None
     GET={} 
     CLIENT_STATE=g.get_cs()
+    COOKIES = None
     COOKIES=COOKIES={}
+    CONTEXT = None
     CONTEXT={}
     CSB=''
     TEMPLATE_STACK = ts.get_ts()
@@ -122,6 +126,10 @@ def kick_start(enviro, start_response):
             _results, _output = error_catcher(_ea, _et, _e, ENVIRO=ENVIRO, TEMPLATE_ENGINE=TEMPLATE_ENGINE,
                 POST=POST, GET=GET, CLIENT_STATE=CLIENT_STATE, COOKIES=COOKIES, CONTEXT={},
                 CSB=CSB, TEMPLATE='')
+            ENVIRO = None
+            CLIENT_STATE = None
+            GET = None
+            POST = None
             return server_respond(pstatus='500',
                 pheaders={'Content-Type': 'text/html'},
                 penviro=ENVIRO,
@@ -129,6 +137,8 @@ def kick_start(enviro, start_response):
                 sr=start_response)
         else: 
             raise Exception("Error Template or App Stack not setup rethrowing the error.") from _e
+    GET = None
+    POST = None
     return server_respond(pstatus='500 ',
         pcontext=[],
         pheaders={'Content-Type': 'text/plain'},
@@ -343,13 +353,21 @@ def run_pyapp(papp_filename='',
     pcache_age=0: if the client is allowed to cache how long is it good for 
     processing is done default is to check the CSB.
 
-    the function must return a boolean type.  if this function is called recursively 
-    there is logic built in to redirect or call a different app to render a different result. 
-    Method ONE is a recursive call must return False to prevent the Output buffer 
-        from being re-rendered and just call run_pyapp setting the parameters as nessarcy 
-    Method TWO return true set  the  global context  and template_stack varabiles to be rendered
-    Method THREE is set the global varabel redirect which is check prior in the server return function, 
-        clears the output buffer,  you can use a query string or users_session to do additional procesing
+    the function must called must return the following
+     _result = boolean type did the function process correctly
+     _raw_output = plain TEXT from typically the results from the Rendering Engine, 
+     ENVIRO = enviroment and any modifications done by the funtion, 
+     CLIENT_STATE = state of the client enviroment, 
+     COOKIES = cookie object to add or subtract 
+     CSB = Cross Script Block code
+
+    To process redirect there are two ways:
+        Method ONE:  call the other function directly and return that result set,  draw back the url in the client 
+            is not changed so refreshes can resend data or results are wrong
+        Method TWO return True, alter the headers stored in the ENVIRO to redirect via 303 and return an empty string from _raw_output
+            there is a header function client_redirect(ENVIRO, url, pheader_code CLIENT_STATE, COOKIES, CSB).  it returns the correct composite 
+            tuple to return to this function. 
+   
 
     Keep in mind the CSB entry may have already checked and deleted from the database there may be a need
     to set the pcheck_CSB to false on recurvise run_pyapp to allow additional processing  
@@ -670,12 +688,16 @@ def load_enviro(e, ENVIRO={}, POST={}, GET={}, CSB='', APPSTACK={}, CLIENT_STATE
     #Load Parse and Process the POST and GET commands
     _appname = '/'
     
+    POST =None
+    GET= None
+    POST = {}
+    GET = {}
     if e.get('REQUEST_METHOD').upper() == 'POST':
-        _result, POST, CSB = parse_POST(e, ENVIRO=ENVIRO)
+        _result, POST, CSB = parse_POST(e, POST=POST, ENVIRO=ENVIRO)
         _result, APPSTACK, _appname = match_uri_to_app(ENVIRO.get('URI_PATH'), APPSTACK, ENVIRO)
         _result, COOKIES = session.load_cookies(e.get('HTTP_COOKIE'))
     elif e.get('REQUEST_METHOD').upper() == 'GET':
-        _result, GET, CSB =parse_GET(e, ENVIRO=ENVIRO)
+        _result, GET, CSB =parse_GET(e, GET=GET, ENVIRO=ENVIRO)
         _result, APPSTACK, _appname = match_uri_to_app(ENVIRO.get('URI_PATH'), APPSTACK, ENVIRO) # find the python applicaiton to run 
         _cr, COOKIES =session.load_cookies(e.get('HTTP_COOKIE')) # load the cookies sent and load a saved session state latter
     
@@ -885,10 +907,14 @@ def create_template_engine():
     from python_html_parser import render_html
     return ender_html
 
-def client_redirect(url_path, ENVIRO, redirect_code='303', ):
-    ENVIRO.update({'STATUS':redirect_code})
-    ENVIRO['HEADERS'].update({'Location:': url_path})
-    return ENVIRO
+def client_redirect( ENVIRO={}, purl='/', redirect_code='303', CLIENT_STATE={}, COOKIES=None, CSB=''):
+    ENVIRO.update({'HEADERS':{
+                'Content-Type':'text/html;',
+                'charset':'UTF-8',
+                'Location':purl
+                }})
+    ENVIRO.update({'STATUS': redirect_code})
+    return True, '', ENVIRO, CLIENT_STATE, COOKIES, CSB
 
 def furl_get_to_app(papp, ENVIRO, GET, ):
     if ENVIRO['APPSTACK'].get(papp) is None :

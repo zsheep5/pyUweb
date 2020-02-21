@@ -1,4 +1,5 @@
 import pyUwf as m
+from  urllib.parse import quote_plus as qp 
 
 def list_cal(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
                 COOKIES={}, CONTEXT={}, TEMPLATE='', 
@@ -15,16 +16,18 @@ def list_cal(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
         ) as serial,
         '<a href=cert_edit?calhead_id=' || calhead_id::text || '>Edit Cert</a>'as url_edit,  
 		'<a href=cert_report?calhead_id=' || calhead_id::text || '>Report</a>'as url_report,
-		'<a href=cert_replace?calhead_id=' || calhead_id::text || '>Replace</a>' as url_replace
+		'<a href=cert_replace?calhead_id=' || calhead_id::text || '>Replace</a>' as url_replace,
+        '<a href=email_cert?calhead_id=' || calhead_id::text || '>Email</a>' as url_email
 		from mcal.calhead 
 		left join mcal.calprohd on calhead_calprohd_id = calprohd_id 
 		left join custinfo on calhead_cust_id = cust_id 
 		order by calhead_caldate desc"""
-    
+    message = GET.get('message',['-1'])[0]
     CONTEXT.update({'cal_head': m.run_sql_command(ENVIRO.get('CONN'), q_str)})
     CONTEXT.update({'cert_types':get_cert_types(ENVIRO)})
     CONTEXT.update({'PAGE_NAME':"List Certificates" })
     CONTEXT.update({'PAGE_DESCRIPTION':"Page listing certificates to edit, print and replace"})
+    CONTEXT.update({'app_messages':message})
     
     _rec = m.run_sql_command(ENVIRO.get('CONN'), q_str)
     _ouput = TEMPLATE_ENGINE(pfile = TEMPLATE, 
@@ -83,6 +86,7 @@ def cert_replace(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
                 COOKIES={}, CONTEXT={}, TEMPLATE='', 
                 TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
     pass
+
 def link_item_cert(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
                 COOKIES={}, CONTEXT={}, TEMPLATE='', 
                 TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
@@ -103,10 +107,7 @@ def link_item_cert(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
     ENVIRO.update({HEADERS:headers})
     return True, '', ENVIRO, CLIENT_STATE, COOKIES, CSB
 
-
-
-def get_item_linked_to_certs(ENVIRO={}, pcalprohd_id=-1):
-        
+def get_item_linked_to_certs(ENVIRO={}, pcalprohd_id=-1):     
     q_str = """ 
         select json_agg( 
             json_build_object(
@@ -284,11 +285,6 @@ def submit_cal_save(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
                             TEMPLATE, TEMPLATE_ENGINE, CSB, TEMPLATE_STACK)
 
 def submit_cal_copy(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
-                COOKIES={}, CONTEXT={}, TEMPLATE='', 
-                TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
-    pass
-
-def email_cert(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
                 COOKIES={}, CONTEXT={}, TEMPLATE='', 
                 TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
     pass
@@ -489,3 +485,15 @@ def get_cert_report(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
         })
 
     return True, _data , ENVIRO, CLIENT_STATE, COOKIES, CSB 
+
+def email_cert(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={}, 
+                COOKIES={}, CONTEXT={}, TEMPLATE='', 
+                TEMPLATE_ENGINE=None, CSB='', TEMPLATE_STACK={}):
+    if 'calhead_id' in GET:
+        _key = int(''.join(GET.get('calhead_id','-1')))
+    elif 'calhead_id' in POST:
+        _key = int(''.join(POST.get('calhead_id','-1')))
+    
+    _sql = "select email_certificate(%(calhead_id)s) as message;"
+    _r = m.run_sql_command(ENVIRO.get('CONN'),_sql, {'calhead_id':_key})
+    return m.client_redirect( ENVIRO, '/list_cal?message='+qp(_r[0]['message']), '303', CLIENT_STATE, COOKIES, CSB)

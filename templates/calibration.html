@@ -5,16 +5,18 @@
    <body class="single"> 
    <TMPL_INCLUDE name="top_nav_bar_mag.html"/>
 
-<!-- Content ================================================== -->
-	     
+<!-- Content ================================================== --> 
 <div id="content-wrap">
     <div class="row">
         <div id="main" class="eight columns">
             <article class="entry">
                 <header class="entry-header">
-                    
+
                         <h2 class="entry-title">
-                            <TMPL_VAR name="List of Certs">
+                            <TMPL_IF name="app_messages" notequal value="-1">
+                                <TMPL_VAR name="app_messages">
+                                
+                            </TMPL_IF>
                         </h2>
                         <div class="entry-meta"> 		
                         <table style="width:100%">
@@ -30,7 +32,6 @@
                                 <th>Report</th>
                                 <th>Replace</th>
                             </tr>
-
                             <TMPL_LOOP name="cal_head">
                                 <tr>
                                     <td><TMPL_VAR name="id"></td>
@@ -43,13 +44,11 @@
                                     <td><TMPL_VAR name="url_edit"></td>
                                     <td><TMPL_VAR name="url_report"></td>
                                     <td><TMPL_VAR name="url_replace"></td>
+                                    <td><TMPL_VAR name="url_email"></td>
                                 </tr>
                             </TMPL_LOOP>
-                                
                         </div> 
-                    
                 </header> 
-            
                 <ul class="post-nav group">
                     <li class="prev"><TMPL_VAR name="next.url"></TMPL_VAR></li>
                     <li class="next"><TMPL_VAR name="prev.url"></li>

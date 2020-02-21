@@ -8,7 +8,7 @@
    ================================================== -->
    <!--
    <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5-build-classic/build/ckeditor.js"> 
-   <!-- <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
    <script src="https://cdn.tiny.cloud/1/hdjwdfr5sjn15d1gc78dbcb84qvnl901dt44ffrmj0xm0814/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
    <script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"></script>
    <!--<script>window.jQuery || document.write('<script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"><\/script>')</script> -->
@@ -47,7 +47,46 @@
 </head>
 <!-- Header
    ================================================== -->
-   <TMPL_INCLUDE name="top_nav_bar_mag.html"/>
+   <header id="top">
+        <div class="row">
+            <div class="header-content twelve columns">
+               <h1 id="logo-text"><a href="/" title=""><TMPL_VAR name="PAGE_NAME"></a></h1>
+         </div>			
+     </div>
+     <nav id="nav-wrap"> 
+        <a class="mobile-btn" href="#nav-wrap" title="Show navigation">Show Menu</a>
+        <a class="mobile-btn" href="#" title="Hide navigation">Hide Menu</a>
+            <div class="row">    		            
+                <ul id="nav" class="nav">
+                    <li><a href="http://www.magwerks.com">Home</a></li>
+                    <TMPL_IF name="SEC.USER_TYPE" value="CUSTOMER">
+                        <li><a href="#">Customer Tools </a>
+                            <ul>
+                                <li><a href="/view">View Calibrations</a></li>
+                                <li><a href="#">Submit Data</a></li>
+                                <li><a href="#">Calibrations that are Due</a></li>
+                                <li><a href="#">Edit Contact Information</a></li>
+                            </ul>
+                        </li>
+                    </TMPL_IF>
+                    <li class="has-children"><a href="#">Magwerks TOOLS</a>
+                        <ul>
+                            <li><a href="/new_service">New Service Report</a></li>
+                            <li><a href="/list_procedures">New Calibration Report</a></li>
+                            <li><a href="/list_cal">List Certificates </a></li>
+                            <li><a href="/list_sreports">List Service Reports </a></li>
+                        </ul>
+                    </li>	
+                    <TMPL_IF name="SEC.USER_LOGGEDIN" value="True"> 
+                        <li><a href="log_out">Log out <TMPL_VAR name="SEC.DISPLAY_NAME"> </a></li>
+                    <TMPL_ELSE>
+                        <li><a href="log_in">Login</a></li>
+                    </TMPL_IF>
+                </ul> <!-- end #nav -->			   	 
+            </div> 
+	</nav> <!-- end #nav-wrap -->  
+</header>
+
 
    <!-- Content
    ================================================== -->
@@ -63,39 +102,3 @@
     <!-- Footer
    ================================================== -->
 
- <header id="top">
-   	<div class="row">
-   		<div class="header-content twelve columns">
-
-		      <h1 id="logo-text"><a href="/" title=""><TMPL_VAR name="PAGE_NAME"></a></h1>
-				<!--<p id="intro"><TMPL_VAR name="PAGE_NAME"></p>-->
-		</div>			
-	</div>
-	<nav id="nav-wrap"> 
-	   <a class="mobile-btn" href="#nav-wrap" title="Show navigation">Show Menu</a>
-		<a class="mobile-btn" href="#" title="Hide navigation">Hide Menu</a>
-	   	<div class="row">    		            
-			   	<ul id="nav" class="nav">
-						<li><a href="view">Home</a></li>
-						<TMPL_IF name="SEC.USER_LOGGEDIN" value="True">
-							<li class="has-children"><a href="#">User Tools</a>
-								<ul>
-									<li><a href="/new_blog">New Blog</a></li>
-									<li><a href="#">List Of Bogs</a></li>
-								</ul>
-							</li>
-						</TMPL_IF>
-	               	
-	                <li><a href="list">List of Blogs</a></li>
-			      	<li><a href="cats">Categories</a>
-
-					</li>	
-					<TMPL_IF name="SEC.USER_LOGGEDIN" value="True"> 
-							<li><a href="log_out">Log out <TMPL_VAR name="SEC.DISPLAY_NAME"> </a></li>
-					<TMPL_ELSE>
-						  <li><a href="log_in">Login</a></li>
-					</TMPL_IF>
-			   	</ul> <!-- end #nav -->			   	 
-	   	</div> 
-	</nav> <!-- end #nav-wrap -->  	     
-</header> <!-- Header End -->

@@ -112,7 +112,7 @@
 	     
 <div id="content-wrap">
     <div class="row">
-        <div id="main" class="eight columns">
+        <div id="main" class="eleven columns">
             <article class="entry">
 
                 <header class="entry-header">
@@ -133,54 +133,80 @@
                     <input name="calhead_calprohd_id" id="calhead_calprohd_id" type="hidden" placeholder="" value="<TMPL_VAR name="calhead.calhead_calprohd_id">">
                     <input name="calhead_cust_id" id="calhead_cust_id" type="hidden" placeholder="calhead_cust_id"  value="<TMPL_VAR name="calhead.calhead_cust_id">"> 
                     <input name="calhead_cntct_id" id="calhead_cntct_id" type="hidden" placeholder="" value="<TMPL_VAR name="calhead.calhead_cntct_id">">
-                    <label for="calhead_caldate">Calibration Date</label> 
-                        <input name="calhead_caldate" id="calhead_caldate" type="date" placeholder="calhead_caldate" required value="<TMPL_VAR name="calhead.calhead_caldate">">
-                    <label for="calhead_expire">Due Date</label> 
-                        <input name="calhead_expire" id="calhead_expire" type="date" placeholder="" required value="<TMPL_VAR name="calhead.calhead_expire">">
-                    <label for="calhead_temp"> Temperature</label> 
-                        <input name="calhead_temp" id="calhead_temp" type="number" placeholder="calhead_temp" required value="<TMPL_VAR name="calhead.calhead_temp">"> 
-                    <label for="calhead_humdity">Humdity </label> 
-                        <input name="calhead_humdity" id="calhead_humdity" type="number" placeholder="" required value="<TMPL_VAR name="calhead.calhead_humdity">"> 
-                    <label for="calhead_operator_notes">Operator Notes </label> 
-                        <textarea name="calhead_operator_notes" id="calhead_operator_notes" > <TMPL_VAR name="calhead.calhead_operator_notes"> </textarea>
                     <input name="calhead_coitem_id" id="calhead_coitem_id" type="hidden" value="<TMPL_VAR name="calhead.calhead_coitem_id">">
-                    <label for="calhead_failcert"> Failed Cert </label> 
-                        <input name="calhead_failcert" id="calhead_failcert" type="checkbox" <TMPL_IF name="calhead_failcert" value="true"> checked </TMPL_IF> >
-                    <label for="calhead_status"> </label> <TMPL_VAR name="calhead_status"> 
-                    <label for="calhead_addr_line1">Cust Address Line 1 </label> 
-                        <input name="calhead_addr_line1" id="calhead_addr_line1" type="text" placeholder="Line1" required value="<TMPL_VAR name="calhead.calhead_addr_line1">"> 
-                    <label for="calhead_addr_line2">Cust Address Line 2</label> 
-                        <input name="calhead_addr_line2" id="calhead_addr_line2" type="text" placeholder="Line2" required value="<TMPL_VAR name="calhead.calhead_addr_line2">">
-                    <label for="calhead_addr_line3">Cust Address Line 3 </label> 
-                        <input name="calhead_addr_line3" id="calhead_addr_line3" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_line3">">
-                    <label for="calhead_addr_city"> Cust Citry </label> 
-                        <input name="calhead_addr_city" id="calhead_addr_city" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_city">">
-                    <label for="calhead_addr_state"> Cust State</label> 
-                        <input name="calhead_addr_state" id="calhead_addr_state" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_state">">
-                    <label for="calhead_addr_postalcode">Cust Postal Code </label> 
-                        <input name="calhead_addr_postalcode" id="calhead_addr_postalcode" type="number" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_postalcode">">
-                    <label for="calhead_addr_country">Country </label> 
-                        <input name="calhead_addr_country" id="calhead_addr_country" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_country">">
-                    <input name="calhead_addr_number" id="calhead_addr_number" type="hidden" value="<TMPL_VAR name="calhead.calhead_addr_number">">
-                    <label for="calhead_cntct_name"> Contact Name</label> 
-                        <input name="calhead_cntct_name" id="calhead_cntct_name" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_name">"> 
-                    <label for="calhead_cntct_phone">Contact Phone # </label> 
-                        <input name="calhead_cntct_phone" id="calhead_cntct_phone" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_phone">">
-                    <label for="calhead_cntct_fax">Contact Phone </label> 
-                        <input name="calhead_cntct_fax" id="calhead_cntct_fax" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_fax">">
-                    <label for="calhead_cntct_email">Contact Email </label> 
-                        <input name="calhead_cntct_email" id="calhead_cntct_email" type="email" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_email">">
-                    <label for="calhead_cntct_title"> Contact Title</label> 
-                        <input name="calhead_cntct_title" id="calhead_cntct_title" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_title">">
                     <input name="calhead_eqname" id="calhead_eqname" type="hidden" placeholder="" value="<TMPL_VAR name="calhead.calhead_eqname">">
-                    <label for="calhead_notesprinted">Notes to be Printed on the Certificate </label> 
-                        <textarea name="calhead_notesprinted" id="calhead_notesprinted"><TMPL_VAR name="calhead.calhead_notesprinted"></textarea>
-                    <label for="calhead_operator">Lab Technician </label> 
-                        <input name="calhead_operator" id="calhead_operator" type="text" placeholder="" required  value="<TMPL_VAR name="calhead.calhead_operator">">
-                    <label for="calhead_supersedes">Replaced </label> 
-                        <input name="calhead_supersedes" id="calhead_supersedes" type="text" placeholder="" readonly='readonly'  value="<TMPL_VAR name="calhead.calhead_supersedes">">
-                    <label for="calhead_cust_po">Customer PO </label> 
-                        <input name="calhead_cust_po" id="calhead_cust_po" type="text" placeholder="" required  value="<TMPL_VAR name="calhead.calhead_cust_po">"> 
+                    <table style="width:100%">
+                        <tbody>
+                            <tr>
+                            <td>
+                                <label for="calhead_cntct_name"> Contact Name</label> 
+                                    <input name="calhead_cntct_name" id="calhead_cntct_name" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_name">"> 
+                                <label for="calhead_cntct_phone">Contact Phone # </label> 
+                                    <input name="calhead_cntct_phone" id="calhead_cntct_phone" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_phone">">
+                                <label for="calhead_cntct_fax">Contact Phone </label> 
+                                    <input name="calhead_cntct_fax" id="calhead_cntct_fax" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_fax">">
+                                <label for="calhead_cntct_email">Contact Email </label> 
+                                    <input name="calhead_cntct_email" id="calhead_cntct_email" type="email" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_email">">
+                                <label for="calhead_cntct_title"> Contact Title</label> 
+                                    <input name="calhead_cntct_title" id="calhead_cntct_title" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_cntct_title">">
+                                <label for="calhead_addr_line1">Cust Address Line 1 </label> 
+                                    <input name="calhead_addr_line1" id="calhead_addr_line1" type="text" placeholder="Line1" required value="<TMPL_VAR name="calhead.calhead_addr_line1">"> 
+                                <label for="calhead_addr_line2">Cust Address Line 2</label> 
+                                    <input name="calhead_addr_line2" id="calhead_addr_line2" type="text" placeholder="Line2" required value="<TMPL_VAR name="calhead.calhead_addr_line2">">
+                                <label for="calhead_addr_line3">Cust Address Line 3 </label> 
+                                    <input name="calhead_addr_line3" id="calhead_addr_line3" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_line3">">
+                                <label for="calhead_addr_city"> Cust City </label> 
+                                    <input name="calhead_addr_city" id="calhead_addr_city" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_city">">
+                                <label for="calhead_addr_state"> Cust State</label> 
+                                    <input name="calhead_addr_state" id="calhead_addr_state" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_state">">
+                                <label for="calhead_addr_country">Country </label> 
+                                    <input name="calhead_addr_country" id="calhead_addr_country" type="text" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_country">">
+                                <input name="calhead_addr_number" id="calhead_addr_number" type="hidden" value="<TMPL_VAR name="calhead.calhead_addr_number">">
+                            </td>
+                           
+
+                            <td>
+                                <label for="calhead_addr_postalcode">Cust Postal Code </label> 
+                                    <input name="calhead_addr_postalcode" id="calhead_addr_postalcode" type="number" placeholder="" required value="<TMPL_VAR name="calhead.calhead_addr_postalcode">">
+                                <label for="calhead_caldate">Calibration Date</label> 
+                                    <input name="calhead_caldate" id="calhead_caldate" type="date" placeholder="calhead_caldate" required value="<TMPL_VAR name="calhead.calhead_caldate">">
+                                <label for="calhead_expire">Due Date</label> 
+                                    <input name="calhead_expire" id="calhead_expire" type="date" placeholder="" required value="<TMPL_VAR name="calhead.calhead_expire">">
+                                <label for="calhead_temp"> Temperature</label> 
+                                    <input name="calhead_temp" id="calhead_temp" type="number" placeholder="calhead_temp" required value="<TMPL_VAR name="calhead.calhead_temp">"> 
+                                <label for="calhead_humdity">Humdity </label> 
+                                    <input name="calhead_humdity" id="calhead_humdity" type="number" placeholder="" required value="<TMPL_VAR name="calhead.calhead_humdity">"> 
+                                <label for="calhead_operator">Lab Technician </label> 
+                                    <input name="calhead_operator" id="calhead_operator" type="text" placeholder="" required  value="<TMPL_VAR name="calhead.calhead_operator">">
+                                <label for="calhead_supersedes">Replaced </label> 
+                                    <input name="calhead_supersedes" id="calhead_supersedes" type="text" placeholder="" readonly='readonly'  value="<TMPL_VAR name="calhead.calhead_supersedes">">
+                                <label for="calhead_cust_po">Customer PO </label> 
+                                    <input name="calhead_cust_po" id="calhead_cust_po" type="text" placeholder="" required  value="<TMPL_VAR name="calhead.calhead_cust_po">"> 
+                                
+                                <label for="calhead_failcert"> Failed Cert </label> 
+                                    <input name="calhead_failcert" id="calhead_failcert" type="checkbox" <TMPL_IF name="calhead_failcert" value="true"> checked </TMPL_IF> >
+                                <label for="calhead_status"> </label> <TMPL_VAR name="calhead_status"> 
+                            </td>
+                            </tr>
+                            <tr><td>
+                                    <label for="calhead_operator_notes">Operator Notes </label> 
+                                    <textarea name="calhead_operator_notes" id="calhead_operator_notes" > <TMPL_VAR name="calhead.calhead_operator_notes"> </textarea>
+                            </td></tr>
+                            <tr>
+                                <td>
+                                    <label for="calhead_notesprinted">Notes to be Printed on the Certificate </label> 
+                                    <textarea name="calhead_notesprinted" id="calhead_notesprinted"><TMPL_VAR name="calhead.calhead_notesprinted"></textarea>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>    
+                    
+                   
+                    
+                   
+                    
+                    
+                    
                     <input type="submit" formmethod="POST" formaction ="save_cert_header" value="Save Header">
                 </form>
 
