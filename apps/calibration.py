@@ -477,7 +477,7 @@ def get_cert_report(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
              """
     _r = m.run_sql_command(ENVIRO.get('CONN'),q_str, {'calhead_id':_key})
     _output = _r[0]['report_binary']
-    _data = bytes(_output[1:])
+    _data = bytes(_output[0:])
     ENVIRO.get('HEADERS',{}).update(
         {'Content-Type': 'application/pdf', 
         'Content-Description':_r[0]['report_name'],
@@ -496,4 +496,5 @@ def email_cert(POST={}, GET={}, ENVIRO={}, CLIENT_STATE={},
     
     _sql = "select email_certificate(%(calhead_id)s) as message;"
     _r = m.run_sql_command(ENVIRO.get('CONN'),_sql, {'calhead_id':_key})
-    return m.client_redirect( ENVIRO, '/list_cal?message='+qp(_r[0]['message']), '303', CLIENT_STATE, COOKIES, CSB)
+    return m.client_redirect( ENVIRO, '/list_cal?message='+qp(_r[0]['message']), 
+                            '303', CLIENT_STATE, COOKIES, CSB)

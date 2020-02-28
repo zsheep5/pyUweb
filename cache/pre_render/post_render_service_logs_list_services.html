@@ -1,0 +1,149 @@
+<!-- Header================================================== -->
+<!DOCTYPE html>
+<!--[if lt IE 8 ]><html class="no-js ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="no-js ie ie8" lang="en"> <![endif]-->
+<!--[if IE 9 ]><html class="no-js ie ie9" lang="en"> <![endif]-->
+<!--[if (gte IE 8)|!(IE)]><!--><html class="no-js" lang="en"> <!--<![endif]-->
+<head>
+   	<!-- Java Script
+   ================================================== -->
+   <!--
+   <script src="http://localhost:8080/static/js/ckeditor5-build-classic/build/ckeditor.js"> 
+   <script src="http://localhost:8080/static/js/modernizr.js"> </script>-->
+   <script src="https://cdn.tiny.cloud/1/hdjwdfr5sjn15d1gc78dbcb84qvnl901dt44ffrmj0xm0814/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+   <script src="http://localhost:8080/static/js/jquery-3.4.1.js"></script>
+   <!--<script>window.jQuery || document.write('<script src="http://localhost:8080/static/js/jquery-3.4.1.js"><\/script>')</script> -->
+   <script src="http://localhost:8080/static/js/main.js"></script>
+   <script src="https://www.google.com/recaptcha/api.js?render=_reCAPTCHA_site_key"></script>
+   <script>
+      grecaptcha.ready(function() {
+         grecaptcha.execute('_reCAPTCHA_site_key_', {action: 'homepage'}).then(function(token) {
+            ...
+         });
+      });
+   </script>
+
+
+   <!--- Basic Page Needs
+   ================================================== -->
+    <meta charset="utf-8">
+	<title>Magwerks Service Website</title>
+	<meta name="Tag Name not Found in Context" content="">  
+	<meta name="Tag Name not Found in Context" content="">
+
+	<!-- mobile specific metas
+   ================================================== -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+   <!-- CSS
+    ================================================== -->
+    <link rel="stylesheet" href="http://localhost:8080/static/css/default.css">
+    <link rel="stylesheet" href="http://localhost:8080/static/css/layout.css">  
+    <link rel="stylesheet" href="http://localhost:8080/static/css/media-queries.css">    
+
+   <!-- Favicons
+	================================================== -->
+	<link rel="shortcut icon" href="favicon.png" >
+
+</head>
+	<!-- Java Script
+   ================================================== -->
+   <!--
+   <script src="http://localhost:8080/static/js/ckeditor5-build-classic/build/ckeditor.js"> 
+   <script src="http://localhost:8080/static/js/modernizr.js"> </script>-->
+   <script src="https://cdn.tiny.cloud/1/hdjwdfr5sjn15d1gc78dbcb84qvnl901dt44ffrmj0xm0814/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+   <script src="http://localhost:8080/static/js/jquery-3.4.1.js"></script>
+   <!--<script>window.jQuery || document.write('<script src="http://localhost:8080/static/js/jquery-3.4.1.js"><\/script>')</script> -->
+   <script src="http://localhost:8080/static/js/main.js"></script>
+   <script src="https://www.google.com/recaptcha/api.js?render=_reCAPTCHA_site_key"></script>
+   <script>
+      grecaptcha.ready(function() {
+         grecaptcha.execute('_reCAPTCHA_site_key_', {action: 'homepage'}).then(function(token) {
+            ...
+         });
+      });
+   </script>
+
+
+
+   <body class="single"> 
+   <header id="top">
+        <div class="row">
+            <div class="header-content twelve columns">
+               <h1 id="logo-text"><a href="/" title="">List of Services</a></h1>
+         </div>			
+     </div>
+     <nav id="nav-wrap"> 
+        <a class="mobile-btn" href="#nav-wrap" title="Show navigation">Show Menu</a>
+        <a class="mobile-btn" href="#" title="Hide navigation">Hide Menu</a>
+            <div class="row">    		            
+                <ul id="nav" class="nav">
+                    <li><a href="http://www.magwerks.com">Home</a></li>
+                    
+                    <li class="has-children"><a href="#">Magwerks TOOLS</a>
+                        <ul>
+                            <li><a href="/new_service">New Service Report</a></li>
+                            <li><a href="/list_procedures">New Calibration Report</a></li>
+                            <li><a href="/list_cal">List Certificates </a></li>
+                            <li><a href="/list_services">List Service Reports </a></li>
+                        </ul>
+                    </li>	
+                              
+                        <li><a href="log_in">Login</a></li>
+                    
+                </ul> <!-- end #nav -->			   	 
+            </div> 
+	</nav> <!-- end #nav-wrap -->  
+</header>
+
+
+<!-- Content ================================================== --> 
+<div id="content-wrap">
+    <div class="row">
+        <div id="main" class="eight columns">
+            <article class="entry">
+                <header class="entry-header">
+
+                        <h2 class="entry-title">
+                            
+                        </h2>
+                        <div class="entry-meta"> 		
+                        <table style="width:100%">
+                            <tr> 
+                                <th>Incident # </th>
+                                <th>Customer Name  </th>
+                                <th>Customer#  </th>
+                                <th>Summary</th>
+                                <th>Contact</th>
+                                <th>Phone </th>
+                                <th>email</th>
+                                <th>Edit</th>
+                                <th>Get Map</th>
+                                <th>Create Quote</th>
+                            </tr>
+                            
+                                <tr>
+                                    <td>17</td>
+                                    <td>Magwerks</td>
+                                    <td>123456789</td>
+                                    <td>test</td>
+                                    <td>Justin Graf</td>
+                                    <td>3172418011</td>
+                                    <td>justin@magwerks.com</td>
+                                    <td><a href=get_incident?incdt_id=28>Edit</a></td>
+                                    <td><a href=get_map?addr_id=26257>Get Map</a></td>
+                                    <td><a href=create_quote?incdt_id=28>Create Quote</a></td>
+                                </tr>
+                            
+                        </div> 
+                </header> 
+                <ul class="post-nav group">
+                    <li class="prev">Tag Name not Found in Context</TMPL_VAR></li>
+                    <li class="next">Tag Name not Found in Context</li>
+                </ul>
+
+            </article>
+        </div>
+    </div>
+</div>
+

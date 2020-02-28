@@ -126,8 +126,6 @@ def kick_start(enviro, start_response):
             _results, _output = error_catcher(_ea, _et, _e, ENVIRO=ENVIRO, TEMPLATE_ENGINE=TEMPLATE_ENGINE,
                 POST=POST, GET=GET, CLIENT_STATE=CLIENT_STATE, COOKIES=COOKIES, CONTEXT={},
                 CSB=CSB, TEMPLATE='')
-            ENVIRO = None
-            CLIENT_STATE = None
             GET = None
             POST = None
             return server_respond(pstatus='500',
@@ -238,7 +236,7 @@ def server_respond(pstatus='200',
         pre=None,
         poutput='',
         sr=None,
-        CLIENT_STATE={},
+        CLIENT_STATE=None,
         pcsb=''
        ):
     
@@ -741,14 +739,18 @@ def parse_POST(web_enviro, POST={}, CSB='', ENVIRO={}):
             for key, value in _form_data.items():
                 POST.update({bytes_to_text(key): [bytes_to_text(i) for i in value]})
                 POST['POST_COUNT']+= 1
-        
         else : 
             _bound =''
             for i in _ct:
                 if i.rfind('boundary=')>=0:
                     _bound = i[_bound.rfind('boundary=')+11:]
             _dd.seek(0)
+            d = open('dd', 'wb')
+            
             _data = _dd.read(request_body_size)
+            d.write(_data)
+            d.flush
+            d.close()
             POST.update({'form_data':parse_mpf(_dd, bytes(_bound.encode('utf-8')), request_body_size)})
         CSB = POST.get('CSB', [''])[0]    
     POST.update({'CONTENT_TYPE': web_enviro.get('CONTENT_TYPE')})
@@ -759,46 +761,38 @@ def parse_mpf(data=None, boundary=b'', size = 0):
     data.seek(0)  
     _count = 0
     in_part = False
+    _data = b''
+    _header = []
 
     while True:
         _d=data.readline() 
-        if _d.rfind(boundary)>=0 and in_part==False:
-            in_part = True 
-            _count = _count +1
-            _form_header = []
-            _data =b''
-            _place = data.tell()
-        elif _d.rfind(boundary)>=0 and in_part==True:
-            _r.append({'header':parse_mdf_header(_form_header),
-                       'data':_data[2:]  ##remove the leading CRLF in the data
-                        })
-            in_part =False 
-            _form_header = []
-            _data =b''
-            if data.tell() == size:
-                break
-        else:
+        _place = data.tell()
+        if _d.rfind(boundary)>=0 :
+            if _data > b'':
+                _r.append([_header, _data[2:-2]])
+            _data = b'' 
+            _header = []
+        else :
             if _d.rfind(b'Content')>=0:
-               _form_header.append(bytes_to_text(_d[:-2]))
-            else:
+                _header.append(parse_mdf_header(_d))
+            else:  
                 _data = _data + _d
+        if data.tell() == size:
+            break
+
     return _r
 
-def parse_mdf_decode_payload(data , encode_method):
-    import binascii
-    import quopri
-
-def parse_mdf_header(plist=[]):
+def parse_mdf_header(pdata=b''):
+    i = pdata.decode()
+    cc = i.split(';')
     _r = {}
-    for i in plist:
-        cc = i.split(';')
-        for i2 in cc:
-            cc2 = i2.split(':')
-            if len(cc2)>1:
-                _r.update({cc2[0].strip():cc2[1].strip()})
-            cc2 = i2.split('=')
-            if len(cc2)>1: 
-                _r.update({cc2[0].strip():cc2[1].replace('"', '')})
+    for i2 in cc:
+        cc2 = i2.split(':')
+        if len(cc2)>1:
+            _r.update({cc2[0].strip():cc2[1].strip()})
+        cc2 = i2.split('=')
+        if len(cc2)>1: 
+            _r.update({cc2[0].strip():cc2[1].replace('"', '')})
     return _r
 
 def parse_GET(web_enviro, GET={}, CSB='', ENVIRO={}):

@@ -1,0 +1,52 @@
+<!-- Header================================================== -->
+<TMPL_INCLUDE name="base.html"/>
+<TMPL_INCLUDE name="js.html"/>
+
+   <body class="single"> 
+   <TMPL_INCLUDE name="top_nav_bar_mag.html"/>
+
+<!-- Content ================================================== -->
+	     
+<div id="content-wrap">
+    <div class="row">
+        <div id="main" class="eight columns">
+            <article class="entry">
+                <header class="entry-header">
+                    <h2 class="entry-title">
+                        <TMPL_VAR name="List of Items on Van">
+                    </h2>
+                    <div class="entry-meta"> 		
+                        <table style="width:100%">
+                            <tr> 
+                                <th>Item Number</th>
+                                <th>Description</th>
+                                <th>Qty on Van</th>
+                                <th>List Price</th>
+                                <th>Add to Quote:<TMPL_VAR name="quote_number"></th>
+                            </tr>
+                            <TMPL_LOOP name="van_inventory">
+                                <tr>
+                                    <td><TMPL_VAR name="item_number"></td>
+                                    <td><TMPL_VAR name="item_descrip1"></td>
+                                    <td><TMPL_VAR name="itemsite_qtyonhand"></td>
+                                    <td><TMPL_VAR name="item_listprice"></td>
+                                    <td> 
+                                        <form>
+                                            <input type="hidden" name="quhead" id="quhead" value= "<TMPL_VAR name="itemsite_id">">
+                                            <input type="hidden" name="itemsite_id" id="itemsite_id" value="<TMPL_VAR name="itemsite_id">">
+                                            <input type="hidden" name="qunumber" id="qunumber" value="<TMPL_VAR name="quhead">">
+                                            <input type="hidden" name="warehouse" id="warehouse" value="<TMPL_VAR name="itemsite_warehous_id">">    
+                                            <input type="number" name="qty" id="qty" value=1 >
+                                            <input type="submit" formmethod="POST" formaction ="add_additem_to_quote" value="Add Item">
+                                        </form>
+                                    </td>
+                                </tr>
+                            </TMPL_LOOP>
+                        </table>
+                    </div> 
+                </header>
+            </article>
+        </div>
+    </div>
+</div>
+

@@ -1,3 +1,4 @@
+<!-- Header================================================== -->
 <!DOCTYPE html>
 <!--[if lt IE 8 ]><html class="no-js ie ie7" lang="en"> <![endif]-->
 <!--[if IE 8 ]><html class="no-js ie ie8" lang="en"> <![endif]-->
@@ -45,11 +46,28 @@
 	<link rel="shortcut icon" href="favicon.png" >
 
 </head>
-<body class="single">
-
-   <!-- Header
+	<!-- Java Script
    ================================================== -->
-	<header id="top">
+   <!--
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/ckeditor5-build-classic/build/ckeditor.js"> 
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/modernizr.js"> </script>-->
+   <script src="https://cdn.tiny.cloud/1/hdjwdfr5sjn15d1gc78dbcb84qvnl901dt44ffrmj0xm0814/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"></script>
+   <!--<script>window.jQuery || document.write('<script src="<TMPL_VAR name="STATIC.furlpath">/js/jquery-3.4.1.js"><\/script>')</script> -->
+   <script src="<TMPL_VAR name="STATIC.furlpath">/js/main.js"></script>
+   <script src="https://www.google.com/recaptcha/api.js?render=_reCAPTCHA_site_key"></script>
+   <script>
+      grecaptcha.ready(function() {
+         grecaptcha.execute('_reCAPTCHA_site_key_', {action: 'homepage'}).then(function(token) {
+            ...
+         });
+      });
+   </script>
+
+
+
+   <body class="single"> 
+   <header id="top">
         <div class="row">
             <div class="header-content twelve columns">
                <h1 id="logo-text"><a href="/" title=""><TMPL_VAR name="PAGE_NAME"></a></h1>
@@ -90,34 +108,56 @@
 </header>
 
 
-   <!-- Content
-   ================================================== -->
-   <div id="content-wrap">
-   	<div class="row">
-   		<div id="main" class="eight columns">
-   			<article class="entry">
-				<header class="entry-header">
+<!-- Content ================================================== --> 
+<div id="content-wrap">
+    <div class="row">
+        <div id="main" class="eight columns">
+            <article class="entry">
+                <header class="entry-header">
 
-					<h2 class="entry-title">
-							<TMPL_VAR name="PAGE_DESCRIPTION">
-					</h2> 				 
-					<li><a href="log_in">Login</a></li>
-				
-				</header> 
-			
+                        <h2 class="entry-title">
+                            <TMPL_IF name="app_messages" notequal value="-1">
+                                <TMPL_VAR name="app_messages">
+                                
+                            </TMPL_IF>
+                        </h2>
+                        <div class="entry-meta"> 		
+                        <table style="width:100%">
+                            <tr> 
+                                <th>Incident # </th>
+                                <th>Customer Name  </th>
+                                <th>Customer#  </th>
+                                <th>Summary</th>
+                                <th>Contact</th>
+                                <th>Phone </th>
+                                <th>email</th>
+                                <th>Edit</th>
+                                <th>Get Map</th>
+                                <th>Create Quote</th>
+                            </tr>
+                            <TMPL_LOOP name="incidents">
+                                <tr>
+                                    <td><TMPL_VAR name="incdt_number"></td>
+                                    <td><TMPL_VAR name="cust_name"></td>
+                                    <td><TMPL_VAR name="cust_number"></td>
+                                    <td><TMPL_VAR name="incdt_summary"></td>
+                                    <td><TMPL_VAR name="contact"></td>
+                                    <td><TMPL_VAR name="cntct_phone"></td>
+                                    <td><TMPL_VAR name="cntct_email"></td>
+                                    <td><TMPL_VAR name="url_edit_incdt"></td>
+                                    <td><TMPL_VAR name="url_map"></td>
+                                    <td><TMPL_VAR name="url_create_quote"></td>
+                                </tr>
+                            </TMPL_LOOP>
+                        </div> 
+                </header> 
+                <ul class="post-nav group">
+                    <li class="prev"><TMPL_VAR name="next.url"></TMPL_VAR></li>
+                    <li class="next"><TMPL_VAR name="prev.url"></li>
+                </ul>
 
-			</article>
+            </article>
+        </div>
+    </div>
+</div>
 
-   		</div> <!-- main End -->
-  	</div> <!-- end row -->
-
- 	<!-- end content-wrap -->   
-
-   <!-- Footer
-   ================================================== -->
-   
-	
-
-</body>
-
-</html>
